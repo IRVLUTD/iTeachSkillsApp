@@ -1,0 +1,8 @@
+{
+  "RosIPAddress": "10.42.0.1",
+  "RosPort": 10000,
+  "KeepaliveTime": 1,
+  "NetworkTimeoutSeconds": 2,
+  "SleepTimeSeconds": 0.033,
+  "ShowHud": false
+}
