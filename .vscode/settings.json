@@ -51,5 +51,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "dc.sln"
+    "dotnet.defaultSolution": "iTeachSkillsApp.sln",
+    "dotnet.preferCSharpExtension": true
 }

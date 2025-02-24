@@ -22,6 +22,7 @@ using iTeachSkills.ROS;
 using RosBoolMsg = RosMessageTypes.Std.BoolMsg; // Import ROS Bool message type
 using RosImgMsg = RosMessageTypes.Sensor.ImageMsg;
 using compressedRosImgMsg = RosMessageTypes.Sensor.CompressedImageMsg;
+using StringMsg = RosMessageTypes.Std.StringMsg;
 
 using TMPro; // Import TextMesh Pro namespace
 //using Microsoft.MixedReality.Toolkit.Input; // Import Mixed Reality Toolkit for input handling
@@ -33,10 +34,17 @@ using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit;
 using System.Security.AccessControl;
 using UnityEngine.Timeline;
+using Unity.XR.CoreUtils;
+//using System.Drawing;
+
+[System.Serializable]
+public class UVListWrapper
+{
+    public List<Vector2> prompts;
+}
 
 namespace iTeachSkills.DataCapture
 {
-
     public class DataCaptureHandler : MonoBehaviour
     {
         // Store a reference to the ROS connection
@@ -52,13 +60,14 @@ namespace iTeachSkills.DataCapture
         public TextMeshProUGUI RecordingStatus; // Reference to RecordingStatus TextMesh Pro object
         public GameObject Canvas; // Reference to the Canvas object
         public Camera MainCamera;
-
+        [SerializeField]
         private const string videoTopic = "/head_camera/rgb/image_raw/compressed";
         private bool isStreaming = false; // Tracks if the robot stream is active
 
         // Voice related
         private KeywordRecognizer keywordRecognizer;
         private Dictionary<string, Action> actions = new Dictionary<string, Action>();
+        [SerializeField]
         private const string recordCommandTopic = "/hololens/out/record_command"; // Single ROS topic for recording commands
         private bool isRecording = false; // Tracks recording state
         private float textDisplayTime = 1f; // 1 sec show time for cmd and warning texts
@@ -71,11 +80,16 @@ namespace iTeachSkills.DataCapture
         private GameObject visualMarkerPrefab;
         [SerializeField]
         private GameObject labelMarkerPrefab;
+        [SerializeField]
+        private GameObject displayObject;
         private GameObject hitPointMarker;
-        private List<Vector3> labelPositions = new List<Vector3>();
-        //private GameObject[] labelMarkers;
-        private List<GameObject> labelMarkers;
+        //private List<Vector3> labelPositions = new List<Vector3>();
+        private List<Vector2> labelUVs = new List<Vector2>();
+        //private List<GameObject> labelMarkers;
+        private Vector3[] displayCorners;
         private bool isLabeling = false;
+        [SerializeField]
+        private const string sendPromptsTopic = "/hololens/out/prompts"; // Single ROS topic for sending prompts to SAM2
 
         // Start is called before the first frame update
         void Start()
@@ -107,16 +121,15 @@ namespace iTeachSkills.DataCapture
 
             // Eye Gaze related
             hitPointMarker = Instantiate(visualMarkerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
-
-
-
+            displayCorners = GetVideoDisplayCorners();
 
             // Define commands and associated actions
             actions.Add("stream", RenderRobotStreamOnCanvas);
-            actions.Add("start capture", StartRecord);
+            actions.Add("begin capture", StartRecord);
             actions.Add("stop capture", StopRecord);
-            actions.Add("start label", StartLabel);
+            actions.Add("begin label", StartLabel);
             actions.Add("save label", SaveLabel);
+            actions.Add("stop label", StopLabel);
 
             // Initialize KeywordRecognizer with exact keywords
             keywordRecognizer = new KeywordRecognizer(actions.Keys.ToArray(), ConfidenceLevel.Medium);
@@ -130,6 +143,7 @@ namespace iTeachSkills.DataCapture
 
             CommandText.text = ""; // Set default command text to empty
             UpdateRecordingStatus(); // Initialize recording status text
+
         }
 
         // Update is called once per frame
@@ -142,8 +156,9 @@ namespace iTeachSkills.DataCapture
                 {
                     return;
                 }
-                else {
-                    UpdateMarkerVis(new Ray(eyeGazeProvider.GazeOrigin, eyeGazeProvider.GazeDirection));
+                else
+                {
+                    UpdateVisMarker(new Ray(eyeGazeProvider.GazeOrigin, eyeGazeProvider.GazeDirection));
                 }
             }
         }
@@ -213,6 +228,7 @@ namespace iTeachSkills.DataCapture
 
                 // register the publisher topic
                 rosConnection.RegisterPublisher<RosBoolMsg>(recordCommandTopic);
+                rosConnection.RegisterPublisher<StringMsg>(sendPromptsTopic);
             }
             else
             {
@@ -388,8 +404,6 @@ namespace iTeachSkills.DataCapture
                 {
                     MakeVideoDisplayOpaque();
 
-                    labelMarkers = new List<GameObject>();
-
                     if (isStreaming)
                     {
                         var warnMsg = "Stream command ignored: already streaming.";
@@ -399,7 +413,6 @@ namespace iTeachSkills.DataCapture
 
                     // Start subscribing to the robot's stream
                     SubscribeToStream();
-
                     isStreaming = true;
                 }
                 else
@@ -464,9 +477,9 @@ namespace iTeachSkills.DataCapture
 
                 Debug.Log("Inside StopRecord");
                 isRecording = false; // Set recording state to false
-                UpdateRecordingStatus(); // Update UI
-                MakeVideoDisplayTransparent(); // VideoDisplay Pane -> Transparent
+                //MakeVideoDisplayTransparent(); // VideoDisplay Pane -> Transparent
                 SendRecordCommand(isRecording); // Send `false` to ROS topic
+                UpdateRecordingStatus(); // Update UI
             }
             catch (Exception ex)
             {
@@ -487,6 +500,7 @@ namespace iTeachSkills.DataCapture
                     {
                         byte[] imageData = msg.data;
                         texture.LoadImage(imageData);
+                        //DrawUVsOnTexture(labelUVs, Color.red);
                         texture.Apply();
                     }
                 );
@@ -621,41 +635,126 @@ namespace iTeachSkills.DataCapture
         private void StartLabel()
         {
             Debug.Log("Start Label command received.");
-
+            if (isLabeling)
+            {
+                Debug.LogWarning("Start Label command ignored: already in labeling mode.");
+                return;
+            }
             isLabeling = true;
-
-
+            MakeVideoDisplayOpaque();
         }
 
         private void SaveLabel()
         {
             Debug.Log("Save Label command received.");
-
-            if (isLabeling)
+            if (!isLabeling)
             {
-                // Save the current label position
-                if (hitPointMarker != null)
+                Debug.LogWarning("Save Label command ignored: not in labeling mode.");
+                return;
+            }
+
+            // Save the current label position
+            if (hitPointMarker != null)
+            {
+                //var marker = Instantiate(labelMarkerPrefab, hitPointMarker.transform.position, Quaternion.identity) as GameObject;
+                //marker.transform.SetParent(displayObject.transform, true);
+                Vector3 labelPos = displayObject.transform.worldToLocalMatrix.MultiplyPoint3x4(hitPointMarker.transform.position);
+
+                //var marker = Instantiate(labelMarkerPrefab, new Vector3(0, 0, 0), Quaternion.identity) as GameObject;
+                //marker.transform.SetParent(displayObject.transform, true);
+                //marker.transform.localPosition = labelPos;
+
+                ////marker.transform.localPosition = labelPos;
+                //Vector3 labelPos = new Vector3(marker.transform.localPosition.x, marker.transform.localPosition.y, 0);
+                //labelMarkers.Add(marker);
+                //ResetMarker(ref hitPointMarker);
+
+                Vector2? uv = GetCursorPosInTexture(labelPos);
+
+
+                //labelPositions.Add(hitPointMarker.transform.position);
+                //Debug.Log("Label position saved: " + labelPos);
+                if (uv != null)
                 {
-                    labelPositions.Add(hitPointMarker.transform.position);
-                    Debug.Log("Label position saved: " + hitPointMarker.transform.position);
+                    labelUVs.Add(uv.Value);
+                    Debug.Log("Label UV saved: " + uv.Value);
+                    DrawUVOnTexture(uv, Color.red);
+                    
                 }
                 else
                 {
-                    Debug.LogWarning("Eye Gaze Provider not found.");
+                    Debug.LogWarning("Label UV not saved.");
                 }
 
-                // Update the label markers
-                MakeLabelMarkers();
 
-                isLabeling = false;
             }
             else
             {
-                Debug.LogWarning("Save Label command ignored: not in labeling mode.");
+                Debug.LogWarning("Eye Gaze Provider not found.");
             }
         }
 
-        private void UpdateMarkerVis(Ray ray)
+        private void StopLabel()
+        {
+            Debug.Log("Stop Label command received.");
+            isLabeling = false;
+
+            // Save the label UVs to JSON
+            string json = UVsToJSON(labelUVs);
+
+            // Send the label UVs to ROS
+            SendLabelUVs(json);
+
+            // Clear the label UVs
+            labelUVs.Clear();
+
+            // Reset the visual marker
+            ResetMarker(ref hitPointMarker);
+
+            // Make the display transparent
+            MakeVideoDisplayTransparent();
+        }
+
+        private string UVsToJSON(List<Vector2> uvs)
+        {
+            string json = "";
+            if (uvs == null || uvs.Count == 0)
+            {
+                Debug.LogWarning("No UVs to convert to JSON.");
+                return json;
+            }
+
+            try
+            {
+                Debug.Log("UVs: " + string.Join(", ", uvs));
+                UVListWrapper uvsWrapper = new() { prompts = uvs };
+                json = JsonUtility.ToJson(uvsWrapper, true);
+                Debug.Log("UVs converted to JSON: " + json);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error while converting UVs to JSON: {ex.Message}");
+            }
+            return json;
+        }
+
+        private void SendLabelUVs(string uvsJson)
+        {
+            try
+            {
+                // Create a ROS message with the UVs JSON
+                var data = new StringMsg { data = uvsJson };
+                // Publish the label UVs to the ROS topic
+                rosConnection.Publish(sendPromptsTopic, data);
+                Debug.Log("Sent label UVs to ROS topic: " + sendPromptsTopic);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error while sending label UVs to ROS: {ex.Message}");
+            }
+        }
+
+        private void UpdateVisMarker(Ray ray)
         {
             Vector3? hitPoint = PerformHitTest(ray);
             if (hitPoint != null)
@@ -676,28 +775,23 @@ namespace iTeachSkills.DataCapture
         private void InitMarker(ref GameObject marker)
         {
             marker = Instantiate(visualMarkerPrefab, new Vector3(0, 0, 0), Quaternion.identity) as GameObject;
+            marker.SetActive(true);
         }
 
-        private void ResetLabelMarkers()
-        {
-            if (labelMarkers != null)
-            {
-                foreach (var marker in labelMarkers)
-                {
-                    Destroy(marker);
-                }
-            }
-        }
 
-        private void MakeLabelMarkers()
+        // Corners in local space: BottomLeft, TopLeft, TopRight, BottomRight
+        private Vector3[] GetVideoDisplayCorners()
         {
-            if (hitPointMarker != null)
-            {
-                var marker = Instantiate(labelMarkerPrefab, new Vector3(0, 0, 0), Quaternion.identity) as GameObject;
-                UpdateMarkerPos(ref marker, hitPointMarker.transform.position, true);
-                labelMarkers.Add(marker);
-                ResetMarker(ref hitPointMarker);
-            }
+            // Get the RectTransform component
+            RectTransform rt = displayObject.GetComponent<RectTransform>();
+
+            // Get the corners of the video display
+            rt.ForceUpdateRectTransforms();
+
+            Vector3[] corners = new Vector3[4];
+            rt.GetLocalCorners(corners);
+
+            return corners;
         }
 
 
@@ -709,8 +803,11 @@ namespace iTeachSkills.DataCapture
             {
                 InitMarker(ref marker);
             }
-            marker.SetActive(show);
-            marker.transform.position = newPos;
+            else
+            {
+                marker.SetActive(show);
+                marker.transform.position = newPos;
+            }
         }
 
         private Vector3? PerformHitTest(Ray ray)
@@ -720,15 +817,72 @@ namespace iTeachSkills.DataCapture
 
             if (isHit)
             {
-                Debug.Log("Hit point: " + hitInfo.point);
+                //Debug.Log("Hit point: " + hitInfo.point);
                 return hitInfo.point;
             }
             else
             {
-                Debug.Log("No hit point");
+                //Debug.Log("No hit point");
                 return null;
             }
         }
 
+        private Vector2? GetCursorPosInTexture(Vector3 hitPosition)
+        {
+            Vector2? hitPointUV = null;
+
+            try
+            {
+                Vector3 imageSize = displayCorners[2] - displayCorners[0];
+                Vector3 hitPos = hitPosition - displayCorners[0];
+
+                float uvx = hitPos.x / imageSize.x;
+                float uvy = hitPos.y / imageSize.y;
+                hitPointUV = new Vector2(uvx, uvy);
+            }
+            catch (UnityEngine.Assertions.AssertionException)
+            {
+                Debug.LogError(">> AssertionException");
+            }
+
+            return hitPointUV;
+        }
+
+        private void DrawUVsOnTexture(List<Vector2> uvs,Color color, Int32 size = 5)
+        {
+            if (uvs.Count > 0)
+            {
+                foreach (Vector2 uv in uvs)
+                {
+                    int x = (int)(uv.x * texture.width);
+                    int y = (int)(uv.y * texture.height);
+                    for (int i = x - size; i < x + size; i++)
+                    {
+                        for (int j = y - size; j < y + size; j++)
+                        {
+                            texture.SetPixel(i, j, color);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void DrawUVOnTexture(Vector2? uv, Color color, Int32 size = 5)
+        {
+            if (uv != null)
+            {
+                Vector2 uvValue = uv.Value;
+                int x = (int)(uvValue.x * texture.width);
+                int y = (int)(uvValue.y * texture.height);
+                for (int i = x - size; i < x + size; i++)
+                {
+                    for (int j = y - size; j < y + size; j++)
+                    {
+                        texture.SetPixel(i, j, color);
+                    }
+                }
+                texture.Apply();
+            }
+        }
     }
 }

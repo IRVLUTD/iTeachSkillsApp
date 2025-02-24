@@ -260,7 +260,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 90525498}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 1.5}
   m_LocalScale: {x: 0.005, y: 0.005, z: 0.005}
   m_ConstrainProportionsScale: 0
@@ -325,6 +325,7 @@ MonoBehaviour:
   ROS_IP_Port: {fileID: 189777811}
   visualMarkerPrefab: {fileID: 720516003576192537, guid: 7e71b722bf47b664485df97542990e9b, type: 3}
   labelMarkerPrefab: {fileID: 720516003576192537, guid: 175c982cf51c62140a46723fed094b49, type: 3}
+  displayObject: {fileID: 1721976796}
 --- !u!225 &90525507
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1997,15 +1998,15 @@ RectTransform:
   m_GameObject: {fileID: 1721976796}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 3.52, y: 2.64, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 90525502}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.22669044, y: 0.29340795}
-  m_AnchorMax: {x: 0.772, y: 0.7087586}
-  m_AnchoredPosition: {x: 0.41444397, y: -0.5458374}
-  m_SizeDelta: {x: 0.5510025, y: 0.68952847}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1721976798
 MonoBehaviour:
@@ -2061,8 +2062,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 349.51968, y: 200.42784, z: 1.0000114}
-  m_Center: {x: -0.22919178, y: -0.14177561, z: -0.000005727634}
+  m_Size: {x: 100, y: 100, z: 0}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &1855515019
 GameObject:
   m_ObjectHideFlags: 0
