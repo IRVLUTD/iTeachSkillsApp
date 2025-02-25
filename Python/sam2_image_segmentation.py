@@ -31,13 +31,12 @@ class Sam2ImageSegmentation:
     def _get_mask(self, input_point, input_label):
         input_point = np.array([input_point])
         input_label = np.array([1])
-        masks, scores, logits = self._predictor.predict(
+        masks, scores, _ = self._predictor.predict(
             point_coords=input_point,
             point_labels=input_label,
             multimask_output=True,
         )
-        sorted_ind = np.argmax(scores)
-        masks = masks[sorted_ind]
+        masks = masks[np.argmax(scores)]
         return masks[0]
 
     def predict(self, img_rgb, prompts):
