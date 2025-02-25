@@ -120,9 +120,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71c1514a6bd24e1e882cebbe1904ce04, type: 3}
   m_Name: ProductSans-Light SDF 1
   m_EditorClassIdentifier: 
-  hashCode: 0
+  hashCode: -316495945
   material: {fileID: -4569270610864799979}
-  materialHashCode: 0
+  materialHashCode: -637243849
   m_Version: 1.1.0
   m_SourceFontFileGUID: 67f1118aa3ed7a94e86533535e190a72
   m_SourceFontFile_EditorRef: {fileID: 12800000, guid: 67f1118aa3ed7a94e86533535e190a72, type: 3}

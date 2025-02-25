@@ -34,6 +34,12 @@ namespace iTeachSkills.ROS
         public float NetworkTimeoutSeconds;
         public float SleepTimeSeconds;
         public bool ShowHud;
+        public string VideoTopic;
+        public string LabelFrameTopic;
+        public string RecordCommandTopic;
+        public string SendPromptsTopic;
+        public int ImageHeight;
+        public int ImageWidth;
 
         public static RosConnectionConfig CreateFromJSON(string jsonString)
         {
@@ -95,6 +101,7 @@ namespace iTeachSkills.ROS
         // Singleton pattern to ensure only one ROS connection instance
         public static ROSActions Instance;
         public static ROSConnection ros;
+        public static RosConnectionConfig config;
         private string rosConfigPath;
 
         private void Awake()
@@ -128,7 +135,8 @@ namespace iTeachSkills.ROS
         // Connect to ROS server
         public void RosConnect()
         {
-            var config = LoadRosConnectionConfig();
+            //var config = LoadRosConnectionConfig();
+            config = LoadRosConnectionConfig();
             ros = ROSConnection.GetOrCreateInstance();
             ros.RosIPAddress = config.RosIPAddress;
             ros.RosPort = config.RosPort;

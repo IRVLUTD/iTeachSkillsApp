@@ -2,6 +2,7 @@
 // Work done while being at the Intelligent Robotics and Vision Lab at the University of Texas, Dallas
 // Please check the licenses of the respective works utilized here before using this script.
 // 🖋️ Jishnu Jaykumar Padalunkal (2024).
+// 🖋️ Jikai Wang (2025).
 // ----------------------------------------------------------------------------------------------------
 
 // System related
@@ -9,11 +10,12 @@ using System;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Threading.Tasks;
 
 // Unity related
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Windows.Speech;
 using Debug = UnityEngine.Debug; // Alias to resolve ambiguity
 
 // Ros related
@@ -25,50 +27,135 @@ using compressedRosImgMsg = RosMessageTypes.Sensor.CompressedImageMsg;
 using StringMsg = RosMessageTypes.Std.StringMsg;
 
 using TMPro; // Import TextMesh Pro namespace
-//using Microsoft.MixedReality.Toolkit.Input; // Import Mixed Reality Toolkit for input handling
-//using Microsoft.MixedReality.Toolkit;
-
-using UnityEngine.Windows.Speech;
-using System.Threading.Tasks;
-using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit;
-using System.Security.AccessControl;
-using UnityEngine.Timeline;
-using Unity.XR.CoreUtils;
-//using System.Drawing;
+
+
+
+
 
 [System.Serializable]
-public class UVListWrapper
+public class LabelsWrapper
 {
-    public List<Vector2> prompts;
+    public List<PromptData> prompts;
+
+    public LabelsWrapper()
+    {
+        prompts = new List<PromptData>();
+    }
+
+
+    [System.Serializable]
+    public class PromptData
+    {
+        public List<Vector2> points = new();
+        public List<int> labels = new();
+
+        public int Count()
+        {
+            return points.Count;
+        }
+
+        public void Add(float x, float y, int label)
+        {
+            points.Add(new Vector2(x, y));
+            labels.Add(label);
+        }
+
+        public void Remove(int index)
+        {
+            if (points.Count >= index)
+            {
+                points.RemoveAt(index);
+                labels.RemoveAt(index);
+            }
+        }
+
+        public void Clear()
+        {
+            points.Clear();
+            labels.Clear();
+        }
+    }
+
+    public void Add(float x, float y, int label)
+    {
+        if (prompts.Count ==0)
+        {
+            prompts.Add(new PromptData());
+        }
+        prompts[prompts.Count - 1].Add(x, y, label);
+    }
+
+    public void NewList()
+    {
+        prompts.Add(new PromptData());
+    }
+
+    public void Remove(int index)
+    {
+        if (prompts.Count >= index)
+        {
+            prompts.RemoveAt(index);
+        }
+    }
+
+    public void Remove(int index, int subIndex)
+    {
+        if (prompts.Count >= index && prompts[index].Count() >= subIndex)
+        {
+                prompts[index].Remove(subIndex);
+        }
+    }
+
+    public int Count()
+    {
+        return prompts.Count;
+    }
+
+    public void Clear()
+    {
+        prompts.Clear();
+    }
+
+    public string SaveToString()
+    {
+        return JsonUtility.ToJson(this, false);
+    }
 }
 
 namespace iTeachSkills.DataCapture
 {
+    
     public class DataCaptureHandler : MonoBehaviour
     {
         // Store a reference to the ROS connection
         private ROSConnection rosConnection;
+        private RosConnectionConfig rosConfig;
+        private string videoTopic;
+        private string labelFrameTopic; // Single ROS topic for getting the label frame
+        private string recordCommandTopic; // Single ROS topic for recording commands
+        private string sendPromptsTopic; // Single ROS topic for sending prompts to SAM2
 
         // Video related
-        public RawImage videoDisplay;
+        [SerializeField]
+        private GameObject videoDisplayGo;
+        [SerializeField]
+        private RawImage videoDisplay;
         public bool videoDisplayTransparent = false; // Tracks if the video display is transparent or not
-
         private Texture2D texture;
+
         public TextMeshProUGUI WarningText; // Reference to WarningText TextMesh Pro object
         public TextMeshProUGUI CommandText; // Reference to CommandText TextMesh Pro object
         public TextMeshProUGUI RecordingStatus; // Reference to RecordingStatus TextMesh Pro object
         public GameObject Canvas; // Reference to the Canvas object
         public Camera MainCamera;
-        [SerializeField]
-        private const string videoTopic = "/head_camera/rgb/image_raw/compressed";
+        //private const string videoTopic = "/head_camera/rgb/image_raw/compressed";
         private bool isStreaming = false; // Tracks if the robot stream is active
 
         // Voice related
         private KeywordRecognizer keywordRecognizer;
         private Dictionary<string, Action> actions = new Dictionary<string, Action>();
-        [SerializeField]
-        private const string recordCommandTopic = "/hololens/out/record_command"; // Single ROS topic for recording commands
+        //private const string recordCommandTopic = "/hololens/out/record_command"; // Single ROS topic for recording commands
         private bool isRecording = false; // Tracks recording state
         private float textDisplayTime = 1f; // 1 sec show time for cmd and warning texts
 
@@ -76,20 +163,18 @@ namespace iTeachSkills.DataCapture
         public TextMeshProUGUI ROS_IP_Port;
 
         // Point Prompt Labels by Eye Gaze
+        //private const string sendPromptsTopic = "/hololens/out/prompts"; // Single ROS topic for sending prompts to SAM2
         [SerializeField]
         private GameObject visualMarkerPrefab;
-        [SerializeField]
-        private GameObject labelMarkerPrefab;
-        [SerializeField]
-        private GameObject displayObject;
         private GameObject hitPointMarker;
-        //private List<Vector3> labelPositions = new List<Vector3>();
-        private List<Vector2> labelUVs = new List<Vector2>();
-        //private List<GameObject> labelMarkers;
+        private LabelsWrapper labelUVs = new();
         private Vector3[] displayCorners;
         private bool isLabeling = false;
-        [SerializeField]
-        private const string sendPromptsTopic = "/hololens/out/prompts"; // Single ROS topic for sending prompts to SAM2
+
+        private void Awake()
+        {
+            videoDisplay = videoDisplayGo.GetComponent<RawImage>();
+        }
 
         // Start is called before the first frame update
         void Start()
@@ -114,22 +199,22 @@ namespace iTeachSkills.DataCapture
             MakeVideoDisplayTransparent();
 
             // Video related
-            int initialWidth = 640;  // Replace with your camera’s resolution
-            int initialHeight = 480;
-            texture = new Texture2D(initialWidth, initialHeight, TextureFormat.RGB24, false);
-            videoDisplay.texture = texture;
+            //int initialWidth = 640;  // Replace with your camera’s resolution
+            //int initialHeight = 480;
+            //texture = new Texture2D(initialWidth, initialHeight, TextureFormat.RGB24, false);
+            //videoDisplay.texture = texture;
 
             // Eye Gaze related
-            hitPointMarker = Instantiate(visualMarkerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
             displayCorners = GetVideoDisplayCorners();
 
             // Define commands and associated actions
             actions.Add("stream", RenderRobotStreamOnCanvas);
             actions.Add("begin capture", StartRecord);
             actions.Add("stop capture", StopRecord);
-            actions.Add("begin label", StartLabel);
-            actions.Add("save label", SaveLabel);
-            actions.Add("stop label", StopLabel);
+            actions.Add("true label", TrueLabel);
+            actions.Add("false label", FalseLabel);
+            actions.Add("next object", NextObject);
+            actions.Add("send label", SendLabel);
 
             // Initialize KeywordRecognizer with exact keywords
             keywordRecognizer = new KeywordRecognizer(actions.Keys.ToArray(), ConfidenceLevel.Medium);
@@ -149,7 +234,7 @@ namespace iTeachSkills.DataCapture
         // Update is called once per frame
         void Update()
         {
-            if (isLabeling)
+            if (isLabeling  && !isRecording)
             {
                 var eyeGazeProvider = CoreServices.InputSystem?.EyeGazeProvider;
                 if (eyeGazeProvider == null || videoDisplayTransparent)
@@ -214,6 +299,18 @@ namespace iTeachSkills.DataCapture
 
             // After waiting, store the ROS connection instance
             rosConnection = ROSActions.ros;
+            rosConfig = ROSActions.config;
+
+            if (rosConfig != null)
+            {
+                videoTopic = rosConfig.VideoTopic;
+                recordCommandTopic = rosConfig.RecordCommandTopic;
+                sendPromptsTopic = rosConfig.SendPromptsTopic;
+                labelFrameTopic = rosConfig.LabelFrameTopic;
+
+                texture = new Texture2D(rosConfig.ImageWidth, rosConfig.ImageHeight, TextureFormat.RGB24, false);
+                videoDisplay.texture = texture;
+            }
 
             // Check the connection status if needed
             if (rosConnection != null && !rosConnection.HasConnectionError)
@@ -221,7 +318,7 @@ namespace iTeachSkills.DataCapture
                 // Display connected message with IP and Port
                 if (ROS_IP_Port != null)
                 {
-                    ROS_IP_Port.color = connectedColorGreen; // Green color for successful connection
+                    ROS_IP_Port.color = connectedColorGreen;
                     ROS_IP_Port.text = $"Connected to ROS Server at {rosConnection.RosIPAddress}:{rosConnection.RosPort}";
                 }
                 Debug.Log("Successfully connected to ROS at " + rosConnection.RosIPAddress);
@@ -229,13 +326,32 @@ namespace iTeachSkills.DataCapture
                 // register the publisher topic
                 rosConnection.RegisterPublisher<RosBoolMsg>(recordCommandTopic);
                 rosConnection.RegisterPublisher<StringMsg>(sendPromptsTopic);
+
+                // Subscribe to the label frame topic
+                try
+                {
+                    Debug.Log($"Subscribing to topic: {labelFrameTopic}");
+
+                    // Subscribe to the video topic and update the texture when a message is received
+                    rosConnection.Subscribe<compressedRosImgMsg>(
+                        labelFrameTopic,
+                        msg =>
+                        {
+                            ImageConversion.LoadImage(texture, msg.data);
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Error during SubscribeToLabelFrame: {ex.Message}");
+                }
             }
             else
             {
                 // Display failure message
                 if (ROS_IP_Port != null)
                 {
-                    ROS_IP_Port.color = connectionFailureColorRed; // Green color for successful connection
+                    ROS_IP_Port.color = connectionFailureColorRed;
                     ROS_IP_Port.text = "Failed to connect to ROS.";
                 }
                 Debug.LogError("Failed to connect to ROS.");
@@ -367,12 +483,14 @@ namespace iTeachSkills.DataCapture
         // Example usage: set to transparent or opaque
         public void MakeVideoDisplayTransparent()
         {
-            SetVideoDisplayTransparency(0f); // Fully transparent
+            //SetVideoDisplayTransparency(0f); // Fully transparent
+            videoDisplayGo.SetActive(false);
         }
 
         public void MakeVideoDisplayOpaque()
         {
-            SetVideoDisplayTransparency(1f); // Fully opaque
+            //SetVideoDisplayTransparency(1f); // Fully opaque
+            videoDisplayGo.SetActive(true);
         }
 
         // Function to display a warning message and fade it out
@@ -477,7 +595,9 @@ namespace iTeachSkills.DataCapture
 
                 Debug.Log("Inside StopRecord");
                 isRecording = false; // Set recording state to false
-                //MakeVideoDisplayTransparent(); // VideoDisplay Pane -> Transparent
+                isLabeling = true;
+                ResetLabelData(); // Reset the label data
+                MakeVideoDisplayOpaque();
                 SendRecordCommand(isRecording); // Send `false` to ROS topic
                 UpdateRecordingStatus(); // Update UI
             }
@@ -485,6 +605,113 @@ namespace iTeachSkills.DataCapture
             {
                 Debug.LogError($"Error during StopRecord: {ex.Message}");
             }
+        }
+
+        private void NextObject()
+        {
+            try
+            {
+                if (!isLabeling || isRecording)
+                {
+                    Debug.LogWarning("Next Object command ignored: not in labeling mode.");
+                    return;
+                }
+
+                Debug.Log("Next Object command received.");
+
+                labelUVs.NewList();
+                UpdateRecordingStatus();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error during NextObject: {ex.Message}");
+            }
+        }
+
+        private void SaveLabel(int label)
+        {
+            try
+            {
+                // Save the current label position
+                if (hitPointMarker != null)
+                {
+                    Vector3 labelPos = videoDisplayGo.transform.worldToLocalMatrix.MultiplyPoint3x4(hitPointMarker.transform.position);
+                    Vector2? uv = GetCursorPosInTexture(labelPos);
+
+                    if (uv != null)
+                    {
+                        labelUVs.Add(uv.Value.x, uv.Value.y, label);
+                        if (label == 1)
+                        {
+                            DrawUVOnTexture(uv, Color.green);
+                        }
+                        else
+                        {
+                            DrawUVOnTexture(uv, Color.red);
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Label UV not saved.");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Eye Gaze Provider not found.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error during SavePositiveLabel: {ex.Message}");
+            }
+        }
+
+        private void TrueLabel()
+        {
+            if (!isLabeling || isRecording)
+            {
+                Debug.LogWarning("True Label command ignored: not in labeling mode.");
+                return;
+            }
+
+            Debug.Log("True Label command received.");
+
+            SaveLabel(1);
+        }
+
+        private void FalseLabel()
+        {
+            if (!isLabeling || isRecording)
+            {
+                Debug.LogWarning("False Label command ignored: not in labeling mode.");
+                return;
+            }
+
+            Debug.Log("False Label command received.");
+
+            SaveLabel(0);
+        }
+
+
+
+        private void SendLabel()
+        {
+            Debug.Log("Send Label command received.");
+
+            // Set the labeling state to false
+            isLabeling = false;
+
+            // Update the recording status
+            UpdateRecordingStatus();
+
+            // Send the label UVs to ROS
+            SendLabelUVs();
+
+            // Reset the label data
+            ResetLabelData();
+
+            // Make the display transparent
+            MakeVideoDisplayTransparent();
         }
 
         private void SubscribeToStream()
@@ -498,10 +725,12 @@ namespace iTeachSkills.DataCapture
                     videoTopic,
                     msg =>
                     {
-                        byte[] imageData = msg.data;
-                        texture.LoadImage(imageData);
-                        //DrawUVsOnTexture(labelUVs, Color.red);
-                        texture.Apply();
+                        if (videoDisplayGo.activeSelf && isStreaming)
+                        {
+                            ImageConversion.LoadImage(texture, msg.data);
+                        }
+
+                        //ImageConversion.LoadImage(texture, msg.data);
                     }
                 );
             }
@@ -521,7 +750,6 @@ namespace iTeachSkills.DataCapture
 
             // Unsubscribe from the given ROS topic
             rosConnection.Unsubscribe(topic);
-            //rosConnection.Unsubscribe<compressedRosImgMsg>(topic);
         }
 
         private void UpdateRecordingStatus()
@@ -535,11 +763,18 @@ namespace iTeachSkills.DataCapture
 
                 Color RecOnColorCrimsonRed = new Color(230f / 255f, 57f / 255f, 70f / 255f);  // #E63946
 
+                Color LabelColorMango = new Color(253f / 255f, 190f / 255f, 2f / 255f); // #FDBE02
+
                 // Update RecordingStatus text and color based on isRecording state
                 if (isRecording)
                 {
                     RecordingStatus.text = "Recording: ON";
                     RecordingStatus.color = RecOffColorLimeGreen;
+                }
+                else if (isLabeling)
+                {
+                    RecordingStatus.text = $"Labeling: Object {labelUVs.Count()}";
+                    RecordingStatus.color = LabelColorMango;
                 }
                 else
                 {
@@ -632,118 +867,12 @@ namespace iTeachSkills.DataCapture
             texture.Apply();  // Apply on main thread
         }
 
-        private void StartLabel()
-        {
-            Debug.Log("Start Label command received.");
-            if (isLabeling)
-            {
-                Debug.LogWarning("Start Label command ignored: already in labeling mode.");
-                return;
-            }
-            isLabeling = true;
-            MakeVideoDisplayOpaque();
-        }
-
-        private void SaveLabel()
-        {
-            Debug.Log("Save Label command received.");
-            if (!isLabeling)
-            {
-                Debug.LogWarning("Save Label command ignored: not in labeling mode.");
-                return;
-            }
-
-            // Save the current label position
-            if (hitPointMarker != null)
-            {
-                //var marker = Instantiate(labelMarkerPrefab, hitPointMarker.transform.position, Quaternion.identity) as GameObject;
-                //marker.transform.SetParent(displayObject.transform, true);
-                Vector3 labelPos = displayObject.transform.worldToLocalMatrix.MultiplyPoint3x4(hitPointMarker.transform.position);
-
-                //var marker = Instantiate(labelMarkerPrefab, new Vector3(0, 0, 0), Quaternion.identity) as GameObject;
-                //marker.transform.SetParent(displayObject.transform, true);
-                //marker.transform.localPosition = labelPos;
-
-                ////marker.transform.localPosition = labelPos;
-                //Vector3 labelPos = new Vector3(marker.transform.localPosition.x, marker.transform.localPosition.y, 0);
-                //labelMarkers.Add(marker);
-                //ResetMarker(ref hitPointMarker);
-
-                Vector2? uv = GetCursorPosInTexture(labelPos);
-
-
-                //labelPositions.Add(hitPointMarker.transform.position);
-                //Debug.Log("Label position saved: " + labelPos);
-                if (uv != null)
-                {
-                    labelUVs.Add(uv.Value);
-                    Debug.Log("Label UV saved: " + uv.Value);
-                    DrawUVOnTexture(uv, Color.red);
-                    
-                }
-                else
-                {
-                    Debug.LogWarning("Label UV not saved.");
-                }
-
-
-            }
-            else
-            {
-                Debug.LogWarning("Eye Gaze Provider not found.");
-            }
-        }
-
-        private void StopLabel()
-        {
-            Debug.Log("Stop Label command received.");
-            isLabeling = false;
-
-            // Save the label UVs to JSON
-            string json = UVsToJSON(labelUVs);
-
-            // Send the label UVs to ROS
-            SendLabelUVs(json);
-
-            // Clear the label UVs
-            labelUVs.Clear();
-
-            // Reset the visual marker
-            ResetMarker(ref hitPointMarker);
-
-            // Make the display transparent
-            MakeVideoDisplayTransparent();
-        }
-
-        private string UVsToJSON(List<Vector2> uvs)
-        {
-            string json = "";
-            if (uvs == null || uvs.Count == 0)
-            {
-                Debug.LogWarning("No UVs to convert to JSON.");
-                return json;
-            }
-
-            try
-            {
-                Debug.Log("UVs: " + string.Join(", ", uvs));
-                UVListWrapper uvsWrapper = new() { prompts = uvs };
-                json = JsonUtility.ToJson(uvsWrapper, true);
-                Debug.Log("UVs converted to JSON: " + json);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Error while converting UVs to JSON: {ex.Message}");
-            }
-            return json;
-        }
-
-        private void SendLabelUVs(string uvsJson)
+        private void SendLabelUVs()
         {
             try
             {
                 // Create a ROS message with the UVs JSON
-                var data = new StringMsg { data = uvsJson };
+                var data = new StringMsg { data = labelUVs.SaveToString() };
                 // Publish the label UVs to the ROS topic
                 rosConnection.Publish(sendPromptsTopic, data);
                 Debug.Log("Sent label UVs to ROS topic: " + sendPromptsTopic);
@@ -783,7 +912,7 @@ namespace iTeachSkills.DataCapture
         private Vector3[] GetVideoDisplayCorners()
         {
             // Get the RectTransform component
-            RectTransform rt = displayObject.GetComponent<RectTransform>();
+            RectTransform rt = videoDisplayGo.GetComponent<RectTransform>();
 
             // Get the corners of the video display
             rt.ForceUpdateRectTransforms();
@@ -793,8 +922,6 @@ namespace iTeachSkills.DataCapture
 
             return corners;
         }
-
-
 
 
         private void UpdateMarkerPos(ref GameObject marker, Vector3 newPos, bool show)
@@ -848,32 +975,12 @@ namespace iTeachSkills.DataCapture
             return hitPointUV;
         }
 
-        private void DrawUVsOnTexture(List<Vector2> uvs,Color color, Int32 size = 5)
-        {
-            if (uvs.Count > 0)
-            {
-                foreach (Vector2 uv in uvs)
-                {
-                    int x = (int)(uv.x * texture.width);
-                    int y = (int)(uv.y * texture.height);
-                    for (int i = x - size; i < x + size; i++)
-                    {
-                        for (int j = y - size; j < y + size; j++)
-                        {
-                            texture.SetPixel(i, j, color);
-                        }
-                    }
-                }
-            }
-        }
-
-        private void DrawUVOnTexture(Vector2? uv, Color color, Int32 size = 5)
+        private void DrawUVOnTexture(Vector3? uv, Color color, Int32 size = 5)
         {
             if (uv != null)
             {
-                Vector2 uvValue = uv.Value;
-                int x = (int)(uvValue.x * texture.width);
-                int y = (int)(uvValue.y * texture.height);
+                int x = Mathf.FloorToInt(uv.Value.x * texture.width);
+                int y = Mathf.FloorToInt(uv.Value.y * texture.height);
                 for (int i = x - size; i < x + size; i++)
                 {
                     for (int j = y - size; j < y + size; j++)
@@ -883,6 +990,16 @@ namespace iTeachSkills.DataCapture
                 }
                 texture.Apply();
             }
+        }
+
+        private void ResetLabelData()
+        {
+            // Clear the label data
+            labelUVs.Clear();
+            labelUVs.NewList();
+
+            // Reset the visual marker
+            ResetMarker(ref hitPointMarker);
         }
     }
 }

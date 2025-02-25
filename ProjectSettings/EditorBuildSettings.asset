@@ -8,9 +8,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/iTeachSkillsScene.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
-  - enabled: 0
-    path: Assets/iTeachSkillsScene.unity
-    guid: 0c54fab9e6d381f4da5be2870645ea52
   m_configObjects:
     com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: ef969f9d7383329479539746f1d4a3ba, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 9b451191996c7e7489acc8694a80d164, type: 2}
