@@ -1,16 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 using System.IO;
-
+using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
-
+using Unity.Robotics.ROSTCPConnector.MessageGeneration;
+using ImageMsg = RosMessageTypes.Sensor.ImageMsg;
+using CompressedImageMsg = RosMessageTypes.Sensor.CompressedImageMsg;
 
 namespace iTeachSkills.ROS
 {
-
+    
     [System.Serializable]
     public class RosConnectionConfig
     {
@@ -35,33 +33,25 @@ namespace iTeachSkills.ROS
 
 
 
-
-    public class RosHandler : MonoBehaviour
+    // Wrapper class for ROSTCPConnector
+    public class RosHandler
     {
-        public static RosHandler Instance;
-        public static ROSConnection rosConnection;
-        public static RosConnectionConfig config;
-        
+        public ROSConnection ros;
+        public RosConnectionConfig config;
 
-        private string rosConfigPath;
 
-        void Awake()
+        public RosHandler(ROSConnection rosConnection)
         {
-            // Ensure that there is only one instance of this class
-            if (Instance != null)
-            {
-                Debug.LogError("There should only be one instance of " + this.GetType().Name);
-                Destroy(this);
-                return;
-            }
-            Instance = this;
+            ros = rosConnection;
+
+            // Load ROS connection configuration from a JSON file
+            LoadRosConnectionConfig();
         }
-        
 
         // Load ROS connection configuration from a JSON file
-        private RosConnectionConfig LoadRosConnectionConfig()
+        private void LoadRosConnectionConfig()
         {
-            rosConfigPath = Path.Combine(Application.persistentDataPath, "ROSConnectionConfig.json");
+            var rosConfigPath = Path.Combine(Application.persistentDataPath, "ROSConnectionConfig.json");
             if (!File.Exists(rosConfigPath))
             {
                 rosConfigPath = Path.Combine(Application.streamingAssetsPath, "ROSConnectionConfig.json");
@@ -69,34 +59,58 @@ namespace iTeachSkills.ROS
 
             byte[] bytes = UnityEngine.Windows.File.ReadAllBytes(rosConfigPath);
             string jsonString = System.Text.Encoding.ASCII.GetString(bytes);
-            return RosConnectionConfig.CreateFromJSON(jsonString);
+
+            config = RosConnectionConfig.CreateFromJSON(jsonString);
+
+            ros.RosIPAddress = config.RosIPAddress;
+            ros.RosPort = config.RosPort;
+            ros.KeepaliveTime = config.KeepaliveTime;
+            ros.NetworkTimeoutSeconds = config.NetworkTimeoutSeconds;
+            ros.SleepTimeSeconds = config.SleepTimeSeconds;
+            ros.ShowHud = false;
         }
 
         // Connect to ROS master
-        public void RosConnect()
+        public void Connect()
         {
-            //var config = LoadRosConnectionConfig();
-            config = LoadRosConnectionConfig();
-            rosConnection = ROSConnection.GetOrCreateInstance();
-            rosConnection.RosIPAddress = config.RosIPAddress;
-            rosConnection.RosPort = config.RosPort;
-            rosConnection.KeepaliveTime = config.KeepaliveTime;
-            rosConnection.NetworkTimeoutSeconds = config.NetworkTimeoutSeconds;
-            rosConnection.SleepTimeSeconds = config.SleepTimeSeconds;
-            rosConnection.ShowHud = config.ShowHud;
-            rosConnection.Connect();
-
+            LoadRosConnectionConfig();
+            ros.Connect();
             Debug.Log("Connected to ROS at " + config.RosIPAddress);
         }
 
         // Disconnect from ROS master
-        public void RosDisconnect()
+        public void Disconnect()
         {
-            if (rosConnection != null)
+            if (ros != null)
             {
-                rosConnection.Disconnect();
+                ros.Disconnect();
                 Debug.Log("Disconnected from ROS.");
             }
+        }
+
+        public void SubscribeImageTopic<T>(string topic, Texture2D tex) where T : Message
+        {
+            Utils.LogInfo($"Subscribing to topic: {topic}");
+            ros.Subscribe<T>(topic, (msg) =>
+            {
+                if (msg is ImageMsg imgMsg)
+                {
+                    if (imgMsg.data.Length == 0)
+                    {
+                        return;
+                    }
+                    tex.LoadRawTextureData(imgMsg.data);
+                    tex.Apply();
+                }
+                else if (msg is CompressedImageMsg compressedImgMsg)
+                {
+                    if (compressedImgMsg.data.Length == 0)
+                    {
+                        return;
+                    }
+                    ImageConversion.LoadImage(tex, compressedImgMsg.data);
+                }
+            });
         }
     }
 }

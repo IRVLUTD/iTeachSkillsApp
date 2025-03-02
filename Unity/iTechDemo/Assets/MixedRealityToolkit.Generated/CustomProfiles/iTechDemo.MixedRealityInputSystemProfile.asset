@@ -100,7 +100,7 @@ MonoBehaviour:
     componentName: XRSDK Windows Mixed Reality Eye Gaze Provider
     priority: 0
     runtimePlatform: 8
-    deviceManagerProfile: {fileID: 11400000, guid: 2d87dd11b18f700449c9dab320d19b99, type: 2}
+    deviceManagerProfile: {fileID: 11400000, guid: d3d2d00f4c5a7db47a5a303399631c1d, type: 2}
   - componentType:
       reference: Microsoft.MixedReality.Toolkit.XRSDK.OpenXR.OpenXRDeviceManager,
         Microsoft.MixedReality.Toolkit.Providers.OpenXR

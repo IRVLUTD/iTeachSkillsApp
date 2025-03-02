@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using Unity.Robotics.ROSTCPConnector;
 
 namespace iTeachSkills
 {
@@ -19,6 +20,12 @@ namespace iTeachSkills
         [Tooltip("Default time in second for text fading")]
         [SerializeField] private float textDisplayTime = 1f;
 
+        private ROSConnection ros;
+
+        void Awake()
+        {
+            ros = gameObject.GetComponent<ROSConnection>();
+        }
 
         public void Initialize()
         {
@@ -72,7 +79,7 @@ namespace iTeachSkills
         {
             if (ROS_Text == null) return;
 
-            var ros = iTeachSkills.ROS.RosHandler.rosConnection;
+            //var ros = iTeachSkills.ROS.RosHandler.rosConnection;
 
             if (ros == null)
             {

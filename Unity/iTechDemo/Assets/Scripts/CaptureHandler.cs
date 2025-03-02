@@ -117,6 +117,7 @@ namespace iTeachSkills
         [SerializeField] private string sendPromptsTopic;
 
         // Local variables
+        private ROS.RosHandler rosHandler;
         private GuiHandler guiHandler;
         private GameObject videoFrame;
         private RawImage rawImage;
@@ -130,8 +131,14 @@ namespace iTeachSkills
 
         void Awake()
         {
+            // Find the video display object
+            videoDisplay = GameObject.Find("MixedRealitySceneContent/VideoDisplay");
+
             // Find the video frame object
             videoFrame = videoDisplay.transform.Find("Canvas/VideoFrame").gameObject;
+
+            // Get the ROS handler
+            rosHandler = new ROS.RosHandler(gameObject.GetComponent<ROSConnection>());
 
             // Get the GUI handler
             guiHandler = gameObject.GetComponent<GuiHandler>();
@@ -155,9 +162,10 @@ namespace iTeachSkills
         void OnApplicationQuit()
         {
             UnsubscribeFromStream();
-            ROS.RosHandler.rosConnection.Unsubscribe(labelFrameTopic);
+            rosHandler.ros.Unsubscribe(labelFrameTopic);
+            rosHandler.ros.Unsubscribe(videoTopic);
             SendRecordCommand(false);
-            ROS.RosHandler.Instance.RosDisconnect();
+            rosHandler.Disconnect();
         }
 
 
@@ -198,8 +206,6 @@ namespace iTeachSkills
             }
             else if (isLabeling)
             {
-                //Utils.LogWarning("Cannot begin capture while labeling");
-                //guiHandler?.UpdateWarning("Cannot begin capture while labeling");
                 ResetLabels();
             }
 
@@ -337,37 +343,46 @@ namespace iTeachSkills
             // Connect to ROS master
             try
             {
-                ROS.RosHandler.Instance.RosConnect();
+                rosHandler.Connect();
 
-                // Get ROS connection and configuration
-                //rosConnection = ROS.RosHandler.rosConnection;
-
-                // Get ROS topics
-                var rosConfig = ROS.RosHandler.config;
-                videoTopic = rosConfig.VideoTopic;
-                labelFrameTopic = rosConfig.LabelFrameTopic;
-                recordCommandTopic = rosConfig.RecordCommandTopic;
-                sendPromptsTopic = rosConfig.SendPromptsTopic;
+                // Get ROS connection configuration
+                videoTopic = rosHandler.config.VideoTopic;
+                labelFrameTopic = rosHandler.config.LabelFrameTopic;
+                recordCommandTopic = rosHandler.config.RecordCommandTopic;
+                sendPromptsTopic = rosHandler.config.SendPromptsTopic;
 
                 // Initialize image texture
-                imgTexture = new Texture2D(rosConfig.ImageWidth, rosConfig.ImageHeight, TextureFormat.RGB24, false);
+                var width = rosHandler.config.ImageWidth;
+                var height = rosHandler.config.ImageHeight;
+                imgTexture = new Texture2D(width, height, TextureFormat.RGB24, false);
 
                 // Register publishers
                 if (!string.IsNullOrEmpty(recordCommandTopic))
                 {
                     Utils.LogInfo($"Registering publisher topic: {recordCommandTopic}");
-                    ROS.RosHandler.rosConnection.RegisterPublisher<RosBoolMsg>(recordCommandTopic);
+                    rosHandler.ros.RegisterPublisher<RosBoolMsg>(recordCommandTopic);
                 }
 
                 if (!string.IsNullOrEmpty(sendPromptsTopic))
                 {
                     Utils.LogInfo($"Registering publisher topic: {sendPromptsTopic}");
-                    ROS.RosHandler.rosConnection.RegisterPublisher<StringMsg>(sendPromptsTopic);
+                    rosHandler.ros.RegisterPublisher<StringMsg>(sendPromptsTopic);
                 }
 
-                // Subscribe to label frame topic
-                if (!string.IsNullOrEmpty(labelFrameTopic)){
-                    SubscribeImageTopic<CompressedRosImgMsg>(labelFrameTopic);
+                // Subscribe to the label frame topic
+                if (!string.IsNullOrEmpty(labelFrameTopic))
+                {
+                    Utils.LogInfo($"Subscribing to topic: {labelFrameTopic}");
+                    rosHandler.ros.Subscribe<CompressedRosImgMsg>(labelFrameTopic, (msg) =>
+                    {
+                        if (!isLabeling || msg.data.Length == 0)
+                        {
+                            return;
+                        }
+
+                        ImageConversion.LoadImage(imgTexture, msg.data);
+                        rawImage.texture = imgTexture;
+                    });
                 }
             }
             catch (System.Exception ex)
@@ -391,7 +406,7 @@ namespace iTeachSkills
             if (!string.IsNullOrEmpty(recordCommandTopic))
             {
                 RosBoolMsg msg = new RosBoolMsg { data = isRecording };
-                ROS.RosHandler.rosConnection.Publish(recordCommandTopic, msg);
+                rosHandler.ros.Publish(recordCommandTopic, msg);
 
                 Utils.LogInfo($"Sending record command: {isRecording}");
             }
@@ -404,7 +419,7 @@ namespace iTeachSkills
             if (!string.IsNullOrEmpty(sendPromptsTopic))
             {
                 StringMsg msg = new StringMsg { data = prompts };
-                ROS.RosHandler.rosConnection.Publish(sendPromptsTopic, msg);
+                rosHandler.ros.Publish(sendPromptsTopic, msg);
                 Utils.LogInfo($"Label prompts sent: {prompts}");
             }
         }
@@ -428,9 +443,7 @@ namespace iTeachSkills
 
         private void DrawLabelOnTexture(ref Texture2D tex, float x, float y, int label, int size = 5)
         {
-            //DrawTriangleOnTexture(ref tex, x, y, label == 1 ? Color.green : Color.red, size);
             DrawCircleOnTexture(ref tex, x, y, label == 1 ? Color.green : Color.red, size);
-            //DrawStarOnTexture(ref tex, x, y, label == 1 ? Color.green : Color.red, size);
             imgTexture.Apply();
         }
 
@@ -464,50 +477,6 @@ namespace iTeachSkills
             }
         }
 
-        //private void DrawStarOnTexture(ref Texture2D tex, float uvX, float uvY, Color color, int size)
-        //{
-        //    if (tex == null)
-        //    {
-        //        Debug.LogError("DrawStarOnTexture: Texture is null!");
-        //        return;
-        //    }
-
-        //    int x = Mathf.FloorToInt(uvX * tex.width);
-        //    int y = Mathf.FloorToInt(uvY * tex.height);
-
-        //    // Draw cross shape (+)
-        //    for (int i = -size; i <= size; i++)
-        //    {
-        //        if (x + i >= 0 && x + i < tex.width) // Horizontal check
-        //            tex.SetPixel(x + i, y, color); // Horizontal line
-
-        //        if (y + i >= 0 && y + i < tex.height) // Vertical check
-        //            tex.SetPixel(x, y + i, color); // Vertical line
-        //    }
-
-        //    // Draw diagonal shape (X)
-        //    for (int i = -size; i <= size; i++)
-        //    {
-        //        if (x + i >= 0 && x + i < tex.width && y + i >= 0 && y + i < tex.height) // Main diagonal
-        //            tex.SetPixel(x + i, y + i, color);
-
-        //        if (x + i >= 0 && x + i < tex.width && y - i >= 0 && y - i < tex.height) // Anti diagonal
-        //            tex.SetPixel(x + i, y - i, color);
-        //    }
-        //}
-
-        private void DrawSquareOnTexture(ref Texture2D tex, float x, float y, Color color, int size)
-        {
-            int uv_x = Mathf.FloorToInt(x * tex.width);
-            int uv_y = Mathf.FloorToInt(y * tex.height);
-            for (int i = uv_x - size; i < uv_x + size; i++)
-            {
-                for (int j = uv_y - size; j < uv_y + size; j++)
-                {
-                    tex.SetPixel(i, j, color);
-                }
-            }
-        }
 
         private void DrawTriangleOnTexture(ref Texture2D tex, float uvx, float uvy, Color color, int size = 5)
         {
@@ -544,13 +513,6 @@ namespace iTeachSkills
             float x = (hitPosWorld.x - frameCorners[0].x) / (frameCorners[2].x - frameCorners[0].x);
             float y = (hitPosWorld.y - frameCorners[0].y) / (frameCorners[2].y - frameCorners[0].y);
 
-
-            //var hitPosLocal = videoFrame.transform.worldToLocalMatrix.MultiplyPoint3x4(hitPosWorld);
-            //Utils.LogInfo($"Hit position local: {hitPosLocal}");
-
-            //float x = (hitPosLocal.x - frameCorners[0].x) / (frameCorners[2].x - frameCorners[0].x);
-            //float y = (hitPosLocal.y - frameCorners[0].y) / (frameCorners[1].y - frameCorners[0].y);
-
             if (IsValidUV(x, y))
             {
                 labelPrompts.Add(x, y, label);
@@ -558,7 +520,6 @@ namespace iTeachSkills
                 guiHandler?.UpdateWarning($"Label added: {x}, {y}, {label}");
 
                 // Draw the label on the video frame
-
                 DrawLabelOnTexture(ref imgTexture, x, y, label);                
                 Utils.LogInfo("Label drawn on the video frame");
             }
@@ -598,7 +559,8 @@ namespace iTeachSkills
         private void SubscribeImageTopic<T>(string topic) where T : Message
         {
             Utils.LogInfo($"Subscribing to topic: {topic}");
-            ROS.RosHandler.rosConnection.Subscribe<T>(topic, (msg) =>
+            
+            rosHandler.ros.Subscribe<T>(topic, (msg) =>
             {
                 if (msg is RosImgMsg imgMsg)
                 {
@@ -620,17 +582,60 @@ namespace iTeachSkills
             });
         }
 
+
+        private void SubscribeImageTopic(string topic)
+        {
+            if (topic.Contains("compressed"))
+            {
+                rosHandler.ros.SubscribeByMessageName(topic, "sensor_msgs/CompressedImage", (msg) =>
+                {
+                    if (msg is CompressedRosImgMsg imgMsg)
+                    {
+                        if (imgMsg.data.Length == 0)
+                        {
+                            return;
+                        }
+                        ImageConversion.LoadImage(imgTexture, imgMsg.data);
+                    }
+                });
+            }
+            else
+            {
+                rosHandler.ros.SubscribeByMessageName(topic, "sensor_msgs/Image", (msg) =>
+                {
+                    if (msg is RosImgMsg imgMsg)
+                    {
+                        if (imgMsg.data.Length == 0)
+                        {
+                            return;
+                        }
+                        imgTexture.LoadRawTextureData(imgMsg.data);
+                        imgTexture.Apply();
+                    }
+                });
+            }
+        }
+
         private void SubscribeToStream()
         {
-            SubscribeImageTopic<CompressedRosImgMsg>(videoTopic);
             isStreaming = true;
+
+            //SubscribeImageTopic<CompressedRosImgMsg>(videoTopic);
+            Utils.LogInfo($"Subscribing to topic: {videoTopic}");
+            rosHandler.ros.Subscribe<CompressedRosImgMsg>(videoTopic, (msg) =>
+            {
+                if (isStreaming && msg.data.Length > 0)
+                {
+                    ImageConversion.LoadImage(imgTexture, msg.data);
+                    rawImage.texture = imgTexture;
+                }
+            });
         }
 
         private void UnsubscribeFromStream()
         {
-            ROS.RosHandler.rosConnection.Unsubscribe(videoTopic);
+            rosHandler.ros.Unsubscribe(videoTopic);
             isStreaming = false;
         }
-
     }
 }
