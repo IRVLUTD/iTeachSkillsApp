@@ -1,0 +1,88 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Unity_Projects\\dc\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{44383AC7-6D37-5D2E-E09E-092C3C64652C}|Assembly-CSharp.csproj|D:\\Unity_Projects\\dc\\assets\\scripts\\datacapturehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{44383AC7-6D37-5D2E-E09E-092C3C64652C}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\datacapturehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Unity_Projects\\dc\\Assets\\StreamingAssets\\ROSConnectionConfigTest.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\StreamingAssets\\ROSConnectionConfigTest.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{44383AC7-6D37-5D2E-E09E-092C3C64652C}|Assembly-CSharp.csproj|d:\\unity_projects\\dc\\assets\\scripts\\eyetracker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{44383AC7-6D37-5D2E-E09E-092C3C64652C}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\eyetracker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{44383AC7-6D37-5D2E-E09E-092C3C64652C}|Assembly-CSharp.csproj|d:\\unity_projects\\dc\\assets\\scripts\\systeminfodisplay.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{44383AC7-6D37-5D2E-E09E-092C3C64652C}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\systeminfodisplay.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "EyeTracker.cs",
+              "DocumentMoniker": "D:\\Unity_Projects\\dc\\Assets\\Scripts\\EyeTracker.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\EyeTracker.cs",
+              "ToolTip": "D:\\Unity_Projects\\dc\\Assets\\Scripts\\EyeTracker.cs",
+              "RelativeToolTip": "Assets\\Scripts\\EyeTracker.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-02-18T23:13:59.005Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "SystemInfoDisplay.cs",
+              "DocumentMoniker": "D:\\Unity_Projects\\dc\\Assets\\Scripts\\SystemInfoDisplay.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\SystemInfoDisplay.cs",
+              "ToolTip": "D:\\Unity_Projects\\dc\\Assets\\Scripts\\SystemInfoDisplay.cs",
+              "RelativeToolTip": "Assets\\Scripts\\SystemInfoDisplay.cs",
+              "ViewState": "AgIAAEUAAAAAAAAAAAAqwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-02-18T23:08:58.952Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ROSConnectionConfigTest.json",
+              "DocumentMoniker": "D:\\Unity_Projects\\dc\\Assets\\StreamingAssets\\ROSConnectionConfigTest.json",
+              "RelativeDocumentMoniker": "Assets\\StreamingAssets\\ROSConnectionConfigTest.json",
+              "ToolTip": "D:\\Unity_Projects\\dc\\Assets\\StreamingAssets\\ROSConnectionConfigTest.json",
+              "RelativeToolTip": "Assets\\StreamingAssets\\ROSConnectionConfigTest.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwEAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-02-18T22:40:16.579Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "DataCaptureHandler.cs",
+              "DocumentMoniker": "D:\\Unity_Projects\\dc\\Assets\\Scripts\\DataCaptureHandler.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\DataCaptureHandler.cs",
+              "ToolTip": "D:\\Unity_Projects\\dc\\Assets\\Scripts\\DataCaptureHandler.cs",
+              "RelativeToolTip": "Assets\\Scripts\\DataCaptureHandler.cs",
+              "ViewState": "AgIAAJ0CAAAAAAAAAAAuwK8CAAARAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-02-18T07:40:18.229Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
