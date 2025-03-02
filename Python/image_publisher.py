@@ -96,14 +96,20 @@ class CameraPublisher:
         self._is_recording = msg.data
         if not self._is_recording:
             self._save_recorded_frames()
+        else:
+            self._label_frame = None
+
 
     def _send_prompts_callback(self, msg):
         rospy.loginfo(f"Received prompt: {msg.data}")
         save_data_to_json(self._save_dir / "prompts.json", msg.data)
         prompts = json.loads(msg.data)["prompts"]
         img = draw_prompts_on_image(self._label_frame, prompts)
+        self._label_pub.publish(
+            self._bridge.cv2_to_compressed_imgmsg(img, "jpg")
+        )
+        rospy.loginfo(f"Sent vis frame to {HOLOLENS_TOPICS['labelFrameTopic']}")
         write_bgr_image(CURR_DIR / "vis_label_image.jpg", img)
-        self._label_frame = None
         rospy.loginfo(f"Saved labeled image vis to {CURR_DIR / 'vis_label_image.jpg'}")
 
     def _save_recorded_frames(self):
@@ -115,6 +121,7 @@ class CameraPublisher:
         self._label_pub.publish(
             self._bridge.cv2_to_compressed_imgmsg(self._label_frame, "jpg")
         )
+        rospy.loginfo(f"Sent label frame to {HOLOLENS_TOPICS['labelFrameTopic']}")
         save_bgr_frames(self._save_dir, self._saved_frames)
         rospy.loginfo(f"Saved {len(self._saved_frames)} frames to {self._save_dir}")
         self._saved_frames = []
