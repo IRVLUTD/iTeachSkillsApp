@@ -44,6 +44,7 @@ class CameraPublisher:
         self._saved_frames = []
         self._label_frame = None
         self._is_recording = False
+        self._send_label_frame = False
         self._save_dir = CURR_DIR / "recordings"
         make_clean_folder(self._save_dir)
 
@@ -78,6 +79,19 @@ class CameraPublisher:
                 if self._is_recording:
                     rospy.loginfo(f"is_recording: {self._is_recording}")
                     self._saved_frames.append(frame)
+
+                if self._send_label_frame:
+                    self._label_pub.publish(
+                        self._bridge.cv2_to_compressed_imgmsg(self._label_frame, "jpg")
+                    )
+                    rospy.loginfo(
+                        f"Sent label frame to {HOLOLENS_TOPICS['labelFrameTopic']}"
+                    )
+                    write_bgr_image(CURR_DIR / "vis_label_image.jpg", self._label_frame)
+                    rospy.loginfo(
+                        f"Saved labeled image vis to {CURR_DIR / 'vis_label_image.jpg'}"
+                    )
+                    self._send_label_frame = False
             except CvBridgeError as e:
                 rospy.logerr(e)
 
@@ -99,29 +113,20 @@ class CameraPublisher:
         else:
             self._label_frame = None
 
-
     def _send_prompts_callback(self, msg):
         rospy.loginfo(f"Received prompt: {msg.data}")
         save_data_to_json(self._save_dir / "prompts.json", msg.data)
         prompts = json.loads(msg.data)["prompts"]
-        img = draw_prompts_on_image(self._label_frame, prompts)
-        self._label_pub.publish(
-            self._bridge.cv2_to_compressed_imgmsg(img, "jpg")
-        )
-        rospy.loginfo(f"Sent vis frame to {HOLOLENS_TOPICS['labelFrameTopic']}")
-        write_bgr_image(CURR_DIR / "vis_label_image.jpg", img)
-        rospy.loginfo(f"Saved labeled image vis to {CURR_DIR / 'vis_label_image.jpg'}")
+        # img = draw_prompts_on_image(self._label_frame, prompts)
+        self._label_frame = draw_prompts_on_image(self._label_frame, prompts)
+        self._send_label_frame = True
 
     def _save_recorded_frames(self):
         if len(self._saved_frames) == 0:
             rospy.logwarn("No frames to save.")
             return
         self._label_frame = self._saved_frames[-1]
-        # Send the last frame to the label frame topic
-        self._label_pub.publish(
-            self._bridge.cv2_to_compressed_imgmsg(self._label_frame, "jpg")
-        )
-        rospy.loginfo(f"Sent label frame to {HOLOLENS_TOPICS['labelFrameTopic']}")
+        self._send_label_frame = True
         save_bgr_frames(self._save_dir, self._saved_frames)
         rospy.loginfo(f"Saved {len(self._saved_frames)} frames to {self._save_dir}")
         self._saved_frames = []
