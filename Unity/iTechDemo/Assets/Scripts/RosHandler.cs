@@ -87,30 +87,5 @@ namespace iTeachSkills.ROS
                 Debug.Log("Disconnected from ROS.");
             }
         }
-
-        public void SubscribeImageTopic<T>(string topic, Texture2D tex) where T : Message
-        {
-            Utils.LogInfo($"Subscribing to topic: {topic}");
-            ros.Subscribe<T>(topic, (msg) =>
-            {
-                if (msg is ImageMsg imgMsg)
-                {
-                    if (imgMsg.data.Length == 0)
-                    {
-                        return;
-                    }
-                    tex.LoadRawTextureData(imgMsg.data);
-                    tex.Apply();
-                }
-                else if (msg is CompressedImageMsg compressedImgMsg)
-                {
-                    if (compressedImgMsg.data.Length == 0)
-                    {
-                        return;
-                    }
-                    ImageConversion.LoadImage(tex, compressedImgMsg.data);
-                }
-            });
-        }
     }
 }

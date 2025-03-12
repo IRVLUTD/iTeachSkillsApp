@@ -122,6 +122,7 @@ namespace iTeachSkills
         private GameObject videoFrame;
         private RawImage rawImage;
         private Texture2D imgTexture;
+        private Texture2D labelTexture;
         private bool isStreaming = false;
         private bool isRecording = false;
         private bool isLabeling = false;
@@ -137,25 +138,17 @@ namespace iTeachSkills
             // Find the video frame object
             videoFrame = videoDisplay.transform.Find("Canvas/VideoFrame").gameObject;
 
-            // Get the ROS handler
-            rosHandler = new ROS.RosHandler(gameObject.GetComponent<ROSConnection>());
-
             // Get the GUI handler
             guiHandler = gameObject.GetComponent<GuiHandler>();
         }
 
-        void OnEnable()
+        void Start()
         {
             // Initialize ROS
             InitializeROS();
 
             // Initialize GUI
             InitializeGUI();
-        }
-
-        void Start()
-        {
-
         }
 
         // Disconnect when the application quits
@@ -182,6 +175,7 @@ namespace iTeachSkills
                 return;
             }
 
+            rawImage.texture = imgTexture;
             videoFrame.SetActive(true);
             SubscribeToStream();
         }
@@ -232,6 +226,8 @@ namespace iTeachSkills
             else
             {
                 isRecording = false;
+                isLabeling = true;
+                rawImage.texture = labelTexture;
                 videoFrame.SetActive(true);
                 SendRecordCommand(isRecording);
                 InitializeLabels();
@@ -340,6 +336,9 @@ namespace iTeachSkills
 
         private void InitializeROS()
         {
+            // Get the ROS handler
+            rosHandler = new ROS.RosHandler(gameObject.GetComponent<ROSConnection>());
+
             // Connect to ROS master
             try
             {
@@ -355,6 +354,7 @@ namespace iTeachSkills
                 var width = rosHandler.config.ImageWidth;
                 var height = rosHandler.config.ImageHeight;
                 imgTexture = new Texture2D(width, height, TextureFormat.RGB24, false);
+                labelTexture = new Texture2D(width, height, TextureFormat.RGB24, false);
 
                 // Register publishers
                 if (!string.IsNullOrEmpty(recordCommandTopic))
@@ -380,8 +380,8 @@ namespace iTeachSkills
                             return;
                         }
 
-                        ImageConversion.LoadImage(imgTexture, msg.data);
-                        rawImage.texture = imgTexture;
+                        ImageConversion.LoadImage(labelTexture, msg.data);
+                        rawImage.texture = labelTexture;
                     });
                 }
             }
@@ -393,12 +393,10 @@ namespace iTeachSkills
 
         private void InitializeGUI()
         {
-            guiHandler.Initialize();
-            videoFrame.SetActive(false);
-
-
             rawImage = videoFrame.GetComponent<RawImage>();
-            rawImage.texture = imgTexture;
+            //rawImage.texture = imgTexture;
+            videoFrame.SetActive(false);
+            guiHandler.Initialize();
         }
 
         private void SendRecordCommand(bool isRecording)
@@ -444,7 +442,7 @@ namespace iTeachSkills
         private void DrawLabelOnTexture(ref Texture2D tex, float x, float y, int label, int size = 5)
         {
             DrawCircleOnTexture(ref tex, x, y, label == 1 ? Color.green : Color.red, size);
-            imgTexture.Apply();
+            tex.Apply();
         }
 
         private void DrawCircleOnTexture(ref Texture2D tex, float uvX, float uvY, Color color, int radius)
@@ -520,7 +518,7 @@ namespace iTeachSkills
                 guiHandler?.UpdateWarning($"Label added: {x}, {y}, {label}");
 
                 // Draw the label on the video frame
-                DrawLabelOnTexture(ref imgTexture, x, y, label);                
+                DrawLabelOnTexture(ref labelTexture, x, y, label);                
                 Utils.LogInfo("Label drawn on the video frame");
             }
             else
@@ -530,11 +528,6 @@ namespace iTeachSkills
             }
         }
 
-        public void DebugLog()
-        {
-            videoFrame.SetActive(true);
-            AddOneLabel(1);
-        }
 
         private void InitializeLabels()
         {
@@ -556,66 +549,6 @@ namespace iTeachSkills
             labelPrompts.Clear();
         }
 
-        private void SubscribeImageTopic<T>(string topic) where T : Message
-        {
-            Utils.LogInfo($"Subscribing to topic: {topic}");
-            
-            rosHandler.ros.Subscribe<T>(topic, (msg) =>
-            {
-                if (msg is RosImgMsg imgMsg)
-                {
-                    if (imgMsg.data.Length == 0)
-                    {
-                        return;
-                    }
-                    imgTexture.LoadRawTextureData(imgMsg.data);
-                    imgTexture.Apply();
-                }
-                else if (msg is CompressedRosImgMsg compressedImgMsg)
-                {
-                    if (compressedImgMsg.data.Length == 0)
-                    {
-                        return;
-                    }
-                    ImageConversion.LoadImage(imgTexture, compressedImgMsg.data);
-                }
-            });
-        }
-
-
-        private void SubscribeImageTopic(string topic)
-        {
-            if (topic.Contains("compressed"))
-            {
-                rosHandler.ros.SubscribeByMessageName(topic, "sensor_msgs/CompressedImage", (msg) =>
-                {
-                    if (msg is CompressedRosImgMsg imgMsg)
-                    {
-                        if (imgMsg.data.Length == 0)
-                        {
-                            return;
-                        }
-                        ImageConversion.LoadImage(imgTexture, imgMsg.data);
-                    }
-                });
-            }
-            else
-            {
-                rosHandler.ros.SubscribeByMessageName(topic, "sensor_msgs/Image", (msg) =>
-                {
-                    if (msg is RosImgMsg imgMsg)
-                    {
-                        if (imgMsg.data.Length == 0)
-                        {
-                            return;
-                        }
-                        imgTexture.LoadRawTextureData(imgMsg.data);
-                        imgTexture.Apply();
-                    }
-                });
-            }
-        }
-
         private void SubscribeToStream()
         {
             isStreaming = true;
@@ -627,15 +560,14 @@ namespace iTeachSkills
                 if (isStreaming && msg.data.Length > 0)
                 {
                     ImageConversion.LoadImage(imgTexture, msg.data);
-                    rawImage.texture = imgTexture;
                 }
             });
         }
 
         private void UnsubscribeFromStream()
         {
-            rosHandler.ros.Unsubscribe(videoTopic);
             isStreaming = false;
+            rosHandler.ros.Unsubscribe(videoTopic);
         }
     }
 }
