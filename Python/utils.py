@@ -1,7 +1,9 @@
+import argparse
 import shutil
 import json
 import cv2
 import numpy as np
+from tqdm import tqdm
 from pathlib import Path
 import concurrent.futures
 
@@ -13,7 +15,7 @@ def make_clean_folder(folder):
     dir = Path(folder)
     if Path(folder).exists():
         shutil.rmtree(dir)
-    dir.mkdir(exist_ok=True)
+    dir.mkdir(exist_ok=True, parents=True)
 
 
 def write_rgb_image(file_path, image):
@@ -81,15 +83,15 @@ def draw_uvs_on_image(image, uvs, color=(0, 255, 0), radius=5):
     return draw_points_on_image(img, points, color, radius)
 
 
-def draw_prompts_on_image(image, prompts, radius=5):
+def draw_prompts_on_image(image, prompts, radius=3):
     img = image.copy()
     H, W = img.shape[:2]
     for idx, prompt in enumerate(prompts):
-        text = f"obj_{idx}"
-        points = points = [(int(pt["x"] * W), int((1 - pt["y"]) * H)) for pt in prompt["points"]]
+        text = f"{idx}"
+        points = [(int(pt["x"] * W), int((1 - pt["y"]) * H)) for pt in prompt["points"]]
         labels = prompt["labels"]
         for point, label in zip(points, labels):
             color = (0, 255, 0) if label==1 else (0, 0, 255)
             cv2.circle(img, tuple(point), radius, color, -1)
-            cv2.putText(img, text, tuple(point), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+            cv2.putText(img, text, tuple(point), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
     return img
