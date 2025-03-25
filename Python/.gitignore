@@ -1,2 +1,6 @@
 /recordings
+/robokit
+/output
+/data
+.pytest_cache
 __pycache__
