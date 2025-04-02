@@ -36,6 +36,18 @@ mamba create -n iteachskills python=3.11
 mamba activate iteachskills
 ```
 
+- Install PyTorch v2.5.1 with CUDA 11.8
+
+```bash
+python -m pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
+```
+
+- Install ultralytics
+
+```bash
+python -m pip install ultralytics --no-cache-dir
+```
+
 #### 2. Install ROS1 Melodic as instructed in [RoboStack](https://robostack.github.io/)
 
 - Setup channels

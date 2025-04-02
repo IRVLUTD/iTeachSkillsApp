@@ -1,7 +1,10 @@
+import datetime
 import rospy
 from std_msgs.msg import Bool, String
 from sensor_msgs.msg import CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
+from ultralytics import SAM
+
 from utils import *
 
 
@@ -10,6 +13,7 @@ HOLOLENS_TOPICS = {
     "labelFrameTopic": "/head_camera/label_frame/image_raw/compressed",
     "recordCommandTopic": "/hololens/out/record_command",
     "sendPromptsTopic": "/hololens/out/prompts",
+    "summaryInfoTopic": "/hololens/out/summary_info",
 }
 
 
@@ -32,6 +36,9 @@ class CameraPublisher:
         self._label_pub = rospy.Publisher(
             HOLOLENS_TOPICS["labelFrameTopic"], CompressedImage, queue_size=1
         )
+        self._summary_pub = rospy.Publisher(
+            HOLOLENS_TOPICS["summaryInfoTopic"], String, queue_size=1
+        )
         rospy.Subscriber(
             HOLOLENS_TOPICS["recordCommandTopic"], Bool, self._record_command_callback
         )
@@ -40,11 +47,15 @@ class CameraPublisher:
         )
 
         self._label_frame = None
+        self._raw_label_frame = None
         self._is_recording = False
         self._send_label_frame = False
+        self._summary_info = ""
         self._save_dir = CURR_DIR / "output" / "prompts" / Path(images_source).name
         make_clean_folder(self._save_dir)
         self._frame_id = 0
+
+        self._model = SAM("sam2.1_l.pt")
 
     def _read_rgb_images(self, images_source):
         image_files = sorted(Path(images_source).glob("rgb/*.png"))
@@ -107,6 +118,9 @@ class CameraPublisher:
                         f"Saved labeled image vis to {CURR_DIR / 'vis_label_image.jpg'}"
                     )
                     self._send_label_frame = False
+
+                self._update_summary_info()
+                self._summary_pub.publish(self._summary_info)
             except CvBridgeError as e:
                 rospy.logerr(e)
 
@@ -116,6 +130,14 @@ class CameraPublisher:
         if self._debug:
             cv2.destroyAllWindows()
         rospy.loginfo("Video source released")
+
+    def _update_summary_info(self):
+        curr_date_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self._summary_info = (
+            f"IsRecording: {self._is_recording}\n"
+            + f"IsLabeling: {self._label_frame is not None}\n"
+            + f"Time: {curr_date_time}\n"
+        )
 
     def _record_command_callback(self, msg):
         rospy.loginfo(f"Received record command: {msg.data}")
@@ -129,10 +151,36 @@ class CameraPublisher:
         rospy.loginfo(f"Received prompt: {msg.data}")
         save_data_to_json(self._save_dir / "prompts.json", msg.data)
         prompts = json.loads(msg.data)["prompts"]
-        self._label_frame = draw_prompts_on_image(self._label_frame, prompts)
+        # self._label_frame = draw_prompts_on_image(self._label_frame, prompts)
+        self._label_frame = self._draw_sam2_results(self._raw_label_frame, prompts)
         self._send_label_frame = True
 
+    def _draw_sam2_results(self, image, prompts):
+        img = image.copy()
+        H, W = img.shape[:2]
+        seg_boxes = []
+        seg_masks = []
+        for prompt in prompts:
+            if prompt["points"] and prompt["labels"]:
+                points = [
+                    (int(pt["x"] * W), int((1 - pt["y"]) * H)) for pt in prompt["points"]
+                ]
+                labels = prompt["labels"]
+                results = self._model(img, points=points, labels=labels)
+                boxes = results[0].boxes
+                masks = results[0].masks
+                box = boxes.cpu().numpy().xyxy[0].astype(int)
+                mask = masks.cpu().numpy().data[0].astype(bool)
+                seg_boxes.append(box)
+                seg_masks.append(mask)
+        if seg_boxes and seg_masks:
+            vis = annotate(img, seg_boxes, seg_masks)
+        else:
+            vis = img
+        return vis
+
     def _save_recorded_frames(self):
+        self._raw_label_frame = self._image_frames[-1].copy()
         self._label_frame = self._image_frames[-1]
         self._send_label_frame = True
 
@@ -140,12 +188,16 @@ class CameraPublisher:
 def main():
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument(
-        "scene_folder",
+        "--scene_folder",
         type=str,
-        required=True,
+        default=None,
         help="Path to the folder containing the scene folder",
     )
     args = args_parser.parse_args()
+
+    args.scene_folder = (
+        "/home/jikaiwang/GitHub/iTeachSkillsApp/Python/data/training_set/scene5"
+    )
 
     camera_publisher = CameraPublisher(images_source=args.scene_folder, debug=False)
     camera_publisher.run()
