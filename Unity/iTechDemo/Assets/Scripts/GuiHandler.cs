@@ -16,6 +16,7 @@ namespace iTeachSkills
         [SerializeField] private TextMeshProUGUI Command_Text;
         [SerializeField] private TextMeshProUGUI Status_Text;
         [SerializeField] private TextMeshProUGUI ROS_Text;
+        [SerializeField] private TextMeshProUGUI Summary_Text;
 
         [Tooltip("Default time in second for text fading")]
         [SerializeField] private float textDisplayTime = 1f;
@@ -30,11 +31,19 @@ namespace iTeachSkills
         public void Initialize()
         {
             UpdateSystemInfo();
+            Status_Text.text = $"<b><color=#ff0000>Recording: OFF</color><space=2em><color=#ff0000>Labeling: OFF</color></b>";
             Warning_Text.text = "";
             Command_Text.text = "";
+            Summary_Text.text = "";
             UpdateRosStatus();
             //StartCoroutine(UpdateRosStatusCoroutine(3f));
             InvokeRepeating(nameof(UpdateRosStatus), 3f, 6f);
+        }
+
+        public void UpdateSummary(string message)
+        {
+            if (Summary_Text == null) return;
+            Summary_Text.text = message;
         }
 
         public void UpdateSSID()
@@ -42,8 +51,8 @@ namespace iTeachSkills
             if (SSID_Text == null) return;
             string ssid = Utils.GetSSID();
             SSID_Text.text = string.IsNullOrEmpty(ssid) 
-                ? "<b><color=#c1121f>SSID: N/A</color></b>" 
-                : $"<b><color=#00ffea>SSID: {ssid}</color></b>";
+                ? "<b>SSID: <color=#c1121f>N/A</color></b>" 
+                : $"<b><color=#ffffff>SSID: {ssid}</color></b>";
         }
 
         public void UpdateIP()
@@ -51,8 +60,8 @@ namespace iTeachSkills
             if (IP_Text == null) return;
             string ipAddr = Utils.GetIPAddress();
             IP_Text.text = string.IsNullOrEmpty(ipAddr) 
-                ? "<b><color=#c1121f>IP: N/A</color></b>"
-                : $"<b><color=#00ffea>IP: {ipAddr}</color></b>";
+                ? "<b>IP: <color=#c1121f>N/A</color></b>"
+                : $"<b>IP: <color=#ffffff>{ipAddr}</color></b>";
         }
 
         public void UpdateBattery()
@@ -62,17 +71,17 @@ namespace iTeachSkills
             int percentage = Utils.GetBatteryPercentage();
             string color = percentage < 10 ? "#c1121f" 
                 : (percentage < 20 ? "#ffb703" : "#a7c957");
-            Battery_Text.text = $"<b><color={color}>Battery: {percentage}%</color></b>";
+            Battery_Text.text = $"<b>Battery: <color={color}>{percentage}%</color></b>";
         }
 
         public void UpdateStatus(bool isRecording, int labelIndex)
         {
             if (Status_Text == null) return;
 
-            string record = isRecording ? "Recording: ON" : "Recording: OFF";
-            string label = labelIndex > 0 ? $"Labeling: Object #{labelIndex}" : "Labeling: OFF";
+            string record = isRecording ? "<color=#a7c957>Recording: ON</color>" : "<color=#ff0000>Recording: OFF</color>";
+            string label = labelIndex > 0 ? $"<color=#a7c957>Labeling: Object #{labelIndex}</color>" : "<color=#ff0000>Labeling: OFF</color>";
 
-            Status_Text.text = $"<b><color=#ff0000>{record}</color><space=2em><color=#00ffea>{label}</color></b>";
+            Status_Text.text = $"<b>{record}<space=2em>{label}</b>";
         }
 
         public void UpdateRosStatus()
@@ -136,7 +145,7 @@ namespace iTeachSkills
             }
         }
 
-
+        
         private void UpdateSystemInfo()
         {
             UpdateSSID();

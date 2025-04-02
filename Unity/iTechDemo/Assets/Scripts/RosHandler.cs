@@ -22,6 +22,7 @@ namespace iTeachSkills.ROS
         public string LabelFrameTopic;
         public string RecordCommandTopic;
         public string SendPromptsTopic;
+        public string SummaryInfoTopic;
         public int ImageHeight;
         public int ImageWidth;
 

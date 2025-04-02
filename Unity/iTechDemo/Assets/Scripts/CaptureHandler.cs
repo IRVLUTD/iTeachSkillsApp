@@ -115,6 +115,7 @@ namespace iTeachSkills
         [SerializeField] private string labelFrameTopic;
         [SerializeField] private string recordCommandTopic;
         [SerializeField] private string sendPromptsTopic;
+        [SerializeField] private string summaryInfoTopic;
 
         // Local variables
         private ROS.RosHandler rosHandler;
@@ -129,6 +130,9 @@ namespace iTeachSkills
         private int labelIndex = 0;
         private Texture2D texture;
         private LabelsWrapper labelPrompts = new LabelsWrapper();
+        private GameObject summaryInfoPanel;
+        private string summaryInfo = "";
+        private bool isSummaryInfo = false;
 
         void Awake()
         {
@@ -137,6 +141,9 @@ namespace iTeachSkills
 
             // Find the video frame object
             videoFrame = videoDisplay.transform.Find("Canvas/VideoFrame").gameObject;
+
+            // Find the summary info panel
+            summaryInfoPanel = videoDisplay.transform.Find("Canvas/Summary_Info").gameObject;
 
             // Get the GUI handler
             guiHandler = gameObject.GetComponent<GuiHandler>();
@@ -271,6 +278,32 @@ namespace iTeachSkills
             }
         }
 
+        public void EraseLabel()
+        {
+            Utils.LogInfo("Command Received: Erase Label");
+            guiHandler?.UpdateCommand("Erase Current Labels");
+            if (!isLabeling)
+            {
+                Utils.LogWarning("No label in progress");
+                guiHandler?.UpdateWarning("No label in progress");
+                return;
+            }
+            else if (labelIndex == 0)
+            {
+                Utils.LogWarning("No labels to erase");
+                guiHandler?.UpdateWarning("No labels to erase");
+                return;
+            }
+            else
+            {
+                Utils.LogInfo($"Erasing current labels for index {labelIndex}");
+                labelPrompts.Remove(labelIndex - 1);
+                labelPrompts.NewList();
+                guiHandler?.UpdateWarning("Label erased");
+                SendPrompts();
+            }
+        }
+
         public void SendLabel()
         {
             Utils.LogInfo("Command Received: Send Label");
@@ -334,6 +367,23 @@ namespace iTeachSkills
             }
         }
 
+        public void ShowSummaryInfo()
+        {
+            Utils.LogInfo("Command Received: Show Summary Info");
+            guiHandler?.UpdateCommand("Show Summary Info");
+            if (isSummaryInfo)
+            {
+                summaryInfoPanel.SetActive(false);
+                isSummaryInfo = false;
+            }
+            else
+            {
+                summaryInfoPanel.SetActive(true);
+                guiHandler?.UpdateSummary(summaryInfo);
+                isSummaryInfo = true;
+            }
+        }
+
         private void InitializeROS()
         {
             // Get the ROS handler
@@ -349,6 +399,7 @@ namespace iTeachSkills
                 labelFrameTopic = rosHandler.config.LabelFrameTopic;
                 recordCommandTopic = rosHandler.config.RecordCommandTopic;
                 sendPromptsTopic = rosHandler.config.SendPromptsTopic;
+                summaryInfoTopic = rosHandler.config.SummaryInfoTopic;
 
                 // Initialize image texture
                 var width = rosHandler.config.ImageWidth;
@@ -384,6 +435,16 @@ namespace iTeachSkills
                         rawImage.texture = labelTexture;
                     });
                 }
+
+                // Subscribe to the summary info topic
+                if (!string.IsNullOrEmpty(summaryInfoTopic))
+                {
+                    Utils.LogInfo($"Subscribing to topic: {summaryInfoTopic}");
+                    rosHandler.ros.Subscribe<StringMsg>(summaryInfoTopic, (msg) =>
+                    {
+                        summaryInfo = msg.data;
+                    });
+                }
             }
             catch (System.Exception ex)
             {
@@ -396,6 +457,7 @@ namespace iTeachSkills
             rawImage = videoFrame.GetComponent<RawImage>();
             //rawImage.texture = imgTexture;
             videoFrame.SetActive(false);
+            summaryInfoPanel.SetActive(false);
             guiHandler.Initialize();
         }
 
