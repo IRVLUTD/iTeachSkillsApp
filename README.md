@@ -187,3 +187,27 @@ roslaunch ros_tcp_endpoint endpoint.launch
 mamba activate iteachskills
 python Python/image_publisher.py
 ```
+
+## 📚 BibTex
+Please cite ***iTeach*** if it helps your research 🙌:
+```bibtex
+@misc{padalunkal2024iteach,
+  title         = {iTeach: In the Wild Interactive Teaching for Failure-Driven Adaptation of Robot Perception},
+  author        = {Jishnu Jaykumar P and Cole Salvato and Vinaya Bomnale and Jikai Wang and Yu Xiang},
+  year          = {2026},
+  eprint        = {2410.09072},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.RO},
+  url           = {https://arxiv.org/abs/2410.09072}
+}
+```
+
+## 📬 Contact
+For any clarification, comments, or suggestions, you can choose from the following options:
+
+- Join the [discussion forum](https://github.com/IRVLUTD/iTeach/discussions). 💬
+- Report an [issue](https://github.com/IRVLUTD/iTeach/issues). 🛠️
+- Contact [Jishnu](https://jishnujayakumar.github.io/). 📧
+
+## 🙏 Acknowledgements
+This work was supported by the DARPA Perceptually-enabled Task Guidance (PTG) Program under contract number HR00112220005, the Sony Research Award Program, and the National Science Foundation (NSF) under Grant No.2346528. We thank [Sai Haneesh Allu](https://saihaneeshallu.github.io/) for assistance with the real-world experiments. 🙌
