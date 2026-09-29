@@ -71,6 +71,11 @@ class CameraPublisher:
         self._is_recording = False
         self._send_label_frame = False
         self._root_dir = CURR_DIR / "data_captured"
+        # A new scene folder is created for every capture (see _start_new_scene)
+        self._save_dir = None
+        self._uav_dir = None
+        self._send_label_counter = 0
+        self._last_frame_stamp = None
         sam2_ckpt_dir = f"{CURR_DIR}/ckpts/sam2"
 
         # download_file_if_not_exists(
@@ -89,17 +94,6 @@ class CameraPublisher:
     def run(self):
         rospy.loginfo("Start publishing video frames...")
 
-        # save directory
-        now = datetime.datetime.now()
-        seq_name = "scene_{:%m%dT%H%M%S}/".format(now)
-        
-        self._save_dir = self._root_dir / seq_name
-        make_clean_folder(self._save_dir)
-        
-        self._uav_dir = self._save_dir / "usr_annotation_viz"
-        make_clean_folder(self._uav_dir)
-
-        _send_label_counter = 0
 
         while not rospy.is_shutdown():
             
@@ -121,10 +115,13 @@ class CameraPublisher:
                 # )
                 rgb, depth, RT_camera, RT_laser, robot_velocity, RT_goal = self.listener.get_data_to_save()
 
-                if self._is_recording:
-                    rospy.loginfo(f"is_recording: {self._is_recording}")
-                    self._image_frames.append(rgb)
-                    self._depth_frames.append(depth)
+                if self._is_recording and rgb is not None:
+                    # The loop runs at a fixed rate; only keep frames the camera actually sent
+                    stamp = self.listener.rgb_frame_stamp
+                    if stamp != self._last_frame_stamp:
+                        self._last_frame_stamp = stamp
+                        self._image_frames.append(rgb)
+                        self._depth_frames.append(depth)
 
                 if self._send_label_frame:
                     self._label_pub.publish(
@@ -142,14 +139,14 @@ class CameraPublisher:
                     )
 
                     write_bgr_image(
-                        self._uav_dir / f"bbox_annotated_img_{_send_label_counter}.png", _local_label_frame_copy
+                        self._uav_dir / f"bbox_annotated_img_{self._send_label_counter}.png", _local_label_frame_copy
                     )
 
                     rospy.loginfo(
-                        f"Saved labeled image vis to {self._uav_dir / f'bbox_annotated_img_{_send_label_counter}.png'}"
+                        f"Saved labeled image vis to {self._uav_dir / f'bbox_annotated_img_{self._send_label_counter}.png'}"
                     )
 
-                    _send_label_counter += 1
+                    self._send_label_counter += 1
                     self._send_label_frame = False
 
                 self._update_summary_info()
@@ -181,13 +178,33 @@ class CameraPublisher:
             + f"Time: {curr_date_time}\n"
         )
 
+    def _start_new_scene(self):
+        """Create data_captured/scene_<MMDD>T<HHMMSS>/ for the capture that is starting."""
+        seq_name = "scene_{:%m%dT%H%M%S}".format(datetime.datetime.now())
+        save_dir, k = self._root_dir / seq_name, 1
+        while save_dir.exists():  # never overwrite an earlier capture
+            save_dir, k = self._root_dir / f"{seq_name}_{k}", k + 1
+        self._save_dir = save_dir
+        make_clean_folder(self._save_dir)
+        self._uav_dir = self._save_dir / "usr_annotation_viz"
+        make_clean_folder(self._uav_dir)
+        self._send_label_counter = 0
+        rospy.loginfo(f"New scene: {self._save_dir}")
+
     def _record_command_callback(self, msg):
         rospy.loginfo(f"Received record command: {msg.data}")
-        self._is_recording = msg.data
-        if not self._is_recording:
-            self._save_recorded_frames()
-        else:
+        if msg.data:
+            if self._is_recording:
+                rospy.logwarn("Already recording; ignoring repeated start command.")
+                return
+            self._start_new_scene()
+            self._image_frames, self._depth_frames = [], []
             self._label_frame = None
+            self._raw_label_frame = None
+            self._is_recording = True
+        else:
+            self._is_recording = False
+            self._save_recorded_frames()
 
     def _send_prompts_callback(self, msg):
         rospy.loginfo(f"Received prompt: {msg.data}")
@@ -197,6 +214,9 @@ class CameraPublisher:
         #     pass
         # import pdb; pdb.set_trace()
         # msg.data
+        if self._raw_label_frame is None or self._save_dir is None:
+            rospy.logwarn("Received prompts before any capture was saved; ignoring.")
+            return
         _msg=json.loads(msg.data)
         # self._label_frame = draw_prompts_on_image(self._label_frame, prompts)
         self._label_frame, self._seg_bboxes_for_sam2, self._seg_masks_for_sam2 = \

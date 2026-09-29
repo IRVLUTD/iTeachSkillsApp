@@ -228,13 +228,16 @@ class ImageListener:
             if self.im is None:
                 # todo:fix return objects later
                 return None, None, None, None, None, self.intrinsics
+            # TF poses are None when a lookup failed, and robot_velocity is None
+            # until the first /odom message; don't crash on either.
+            _copy = lambda x: None if x is None else x.copy()
             im_color = self.im.copy()
             depth_image = self.depth.copy()
-            RT_camera = self.RT_camera.copy()
-            RT_laser = self.RT_laser.copy()
+            RT_camera = _copy(self.RT_camera)
+            RT_laser = _copy(self.RT_laser)
             # RT_base = self.RT_base.copy() # For map, uncomment
-            RT_goal = self.current_goal.copy()
-            robot_velocity = self.robot_velocity.copy()
+            RT_goal = _copy(self.current_goal)
+            robot_velocity = _copy(self.robot_velocity)
             #map_data = self.map_img.copy()
         return (
             im_color,

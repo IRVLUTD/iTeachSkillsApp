@@ -78,7 +78,12 @@ iTeach is split into three repositories, one per module:
     <li><a href="#-one-iteach-round">One round</a></li>
     </ul>
   </li>
-  <li><a href="#-running-the-live-system-on-the-robot"><b>Run on the Robot</b></a> · A full iTeach session on the Fetch</li>
+  <li><a href="#-running-the-live-system-on-the-robot"><b>Run on the Robot</b></a> · A full iTeach session on the Fetch
+    <ul>
+    <li><a href="#-network-setup">Network setup</a></li>
+    <li><a href="#️-terminals">Terminals</a></li>
+    </ul>
+  </li>
   <li><a href="#️-build-and-deploy-the-hololens-2-app"><b>Build the HoloLens App</b></a> · Build in Unity and install on the headset
     <ul>
     <li><a href="#requirements">Requirements</a></li>
@@ -300,6 +305,25 @@ sequenceDiagram
 
 <br>
 
+### 🌐 Network setup
+
+This is the lab's setup, taken from the laptop's saved network profiles:
+
+| Link | How | Addresses |
+|:--|:--|:--|
+| 🤖 Robot ↔ 💻 laptop | Wired Ethernet (laptop profile with a static IP) | robot `192.168.1.3`, laptop `192.168.1.4/24` |
+| 🥽 HoloLens ↔ 💻 laptop | The laptop's Wi-Fi **hotspot** (NetworkManager, IPv4 method *Shared to other computers*) | HoloLens gets `10.42.0.x` (e.g. `10.42.0.150`) |
+| 🥽 HoloLens → 🤖 robot endpoint | Through the laptop: a *Shared* hotspot forwards its clients' traffic to the laptop's other networks | `RosIPAddress` = `192.168.1.3`, port `10000` |
+
+- **ROS on the robot** must advertise an address the laptop can reach (`192.168.1.3`), for example with `ROS_IP=192.168.1.3` in the robot's environment.
+- **Quick checks from the laptop:** `ping 192.168.1.3`, then `rostopic hz /head_camera/rgb/image_raw` (after the exports below).
+- **Check from the HoloLens:** set `"ShowHud": true` in the config to see the ROS-TCP-Connector connection status.
+- The Device Portal and the `HoloDevicePortal.py` upload script reach the HoloLens at its hotspot IP (`HOLO_DEVICE_IP`).
+
+<br>
+
+### 🖥️ Terminals
+
 You need five terminals: four on the laptop and one on the robot.
 
 > [!IMPORTANT]
@@ -314,7 +338,7 @@ You need five terminals: four on the laptop and one on the robot.
 | # | Where | Env | Directory | Command |
 |:-:|:--|:--|:--|:--|
 | **0** | 🤖 robot | robot ROS | `~/catkin_ws` | **Start the ROS TCP server:** `roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000`<br><sub>On our Fetch this is the alias `setup_iTeach`. The robot's ROS master (`roscore`) is already running.</sub> |
-| **1** | 💻 laptop | `msm38` | `iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift` | `./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name> [--save]` |
+| **1** | 💻 laptop | MSMFormer env **with ROS Python packages** (lab: `msm39`) | `iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift` | `./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name> [--save]`<br><sub>Serves the pretrained model; to serve a fine-tuned one, set `MODEL` / `MODEL_CFG` ([how](https://github.com/IRVLUTD/iTeach-UOIS#-live-ros-node-on-the-robot))</sub> |
 | **2** | 💻 laptop | `iteachskills` | `iTeachSkillsApp/Python` | `python sub_compress_pub.py` |
 | **3** | 💻 laptop | `iteachskills` | `iTeachSkillsApp` | `python Python/image_publisher_fetch.py` |
 | **4** | 💻 laptop | `iteachskills` | `iTeachSkillsApp/Python` | `rviz -d image_viewer.rviz` |
@@ -326,7 +350,7 @@ You need five terminals: four on the laptop and one on the robot.
 
 <br>
 
-**Where the data goes.** Each capture is saved to `Python/data_captured/scene_<MMDD>T<HHMMSS>/`:
+**Where the data goes.** Every "Begin Capture" starts a new folder, `Python/data_captured/scene_<MMDD>T<HHMMSS>/`, so you can record many captures without restarting terminal 3:
 
 ```
 scene_0826T133015/
@@ -341,7 +365,8 @@ This folder is the input to [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS
 <br>
 
 > [!TIP]
-> **Load the model from a previous round.** In terminal 1, switch the active block in `ros_seg_transformer_test_segmentation_fetch.sh` from `f0` (pretrained) to `f1` / `f2` (`new_ckpts/f*/model_final.pth`).
+> **Serve the model from a previous round.** Start terminal 1 with the fine-tuned run's checkpoint and config:
+> `MODEL=MSMFormer/<out_dir>/model_final.pth MODEL_CFG=MSMFormer/<out_dir>/config.yaml ./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name>`
 
 > [!NOTE]
 > `image_publisher.py` (video file) and `image_publisher_label_only.py` (recorded scene folder) are **offline stand-ins** for terminal 3. See [Test without the robot](#-test-without-the-robot).
@@ -612,7 +637,7 @@ rviz -d Python/image_viewer.rviz
 ```
 
 > [!NOTE]
-> For these offline scripts, set `VideoTopic` to `/head_camera/rgb/image_raw/compressed` in the config.
+> For these offline scripts, upload a config with `RosIPAddress` set to **this machine's IP** (the one you passed as `tcp_ip`) and `VideoTopic` set to `/head_camera/rgb/image_raw/compressed`.
 
 <br>
 
