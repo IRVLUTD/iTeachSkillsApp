@@ -1,38 +1,62 @@
-# iTeachSkillsApp
+<div align="center">
 
-The iTeachSkills App for HoloLens2 developed by Unity. This is the gaze + voice labelling app used in the
-current version of [iTeach](https://irvlutd.github.io/iTeach/). It is one of three repositories:
+# 🥽 iTeachSkillsApp
 
-| Repo | Role in the pipeline |
-|---|---|
-| [IRVLUTD/iTeach](https://github.com/IRVLUTD/iTeach) | Project hub (overview, links, HoloLens/robot networking utilities) |
-| **IRVLUTD/iTeachSkillsApp** (this repo) | HoloLens 2 app + ROS bridge: record a HumanPlay clip, place point prompts on the last frame with eye-gaze + voice, SAM2 preview |
-| [IRVLUTD/iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS) | SAM2 mask propagation, MSMFormer fine-tuning and evaluation |
+### Hands-free, gaze + voice labelling on HoloLens 2 for [iTeach](https://irvlutd.github.io/iTeach/)
 
-## Contents
+<br>
 
-- [iTeachSkillsApp](#iteachskillsapp)
-  - [Contents](#contents)
-  - [System Overview](#system-overview)
-  - [Running the Live System on the Robot](#running-the-live-system-on-the-robot)
-  - [Build and Deploy the HoloLens 2 App](#build-and-deploy-the-hololens-2-app)
-  - [Point the App at Your ROS Server (ROSConnectionConfig.json)](#point-the-app-at-your-ros-server-rosconnectionconfigjson)
-  - [Environment Setup](#environment-setup)
-      - [1. Create Conda Environment](#1-create-conda-environment)
-      - [2. Install ROS1 Noetic as instructed in RoboStack](#2-install-ros1-noetic-as-instructed-in-robostack)
-      - [3. Compile `ros_tcp_endpoint` Package in ROS1 Noetic](#3-compile-ros_tcp_endpoint-package-in-ros1-noetic)
-  - [How to Test on Linux](#how-to-test-on-linux)
-      - [Terminal 1: Start ROS1 Noetic](#terminal-1-start-ros1-noetic)
-      - [Terminal 2: Launch ros\_tcp\_endpoint](#terminal-2-launch-ros_tcp_endpoint)
-      - [Terminal 3: Publish Images from a Video or a Scene Directory](#terminal-3-publish-images-from-a-video-or-a-scene-directory)
-      - [Terminal 4: Run RVIZ to Visualize the Images](#terminal-4-run-rviz-to-visualize-the-images)
-  - [Output Format and Hand-off to iTeach-UOIS](#output-format-and-hand-off-to-iteach-uois)
-  - [How to Test on Windows](#how-to-test-on-windows)
-      - [Terminal 1: Start ROS1 Noetic](#terminal-1-start-ros1-noetic-1)
-      - [Terminal 2: Launch ros\_tcp\_endpoint](#terminal-2-launch-ros_tcp_endpoint-1)
-      - [Terminal 3: Publish test images](#terminal-3-publish-test-images)
+[![Project Page](https://img.shields.io/badge/Project-Page-2ea44f?style=for-the-badge)](https://irvlutd.github.io/iTeach/)
+[![arXiv](https://img.shields.io/badge/arXiv-2410.09072-b31b1b?style=for-the-badge)](https://arxiv.org/abs/2410.09072)
 
-## System Overview
+![Unity](https://img.shields.io/badge/Unity-2022.3.60f1-000000?logo=unity&logoColor=white)
+![HoloLens 2](https://img.shields.io/badge/HoloLens-2-0078D4?logo=microsoft&logoColor=white)
+![ROS](https://img.shields.io/badge/ROS-Noetic-22314E?logo=ros&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![SAM2](https://img.shields.io/badge/SAM2-ultralytics-8A2BE2)
+
+<br>
+
+[**System Overview**](#-system-overview) &nbsp;·&nbsp;
+[**Run on the Robot**](#-running-the-live-system-on-the-robot) &nbsp;·&nbsp;
+[**Build the App**](#️-build-and-deploy-the-hololens-2-app) &nbsp;·&nbsp;
+[**Configure ROS**](#-point-the-app-at-your-ros-server) &nbsp;·&nbsp;
+[**Environment**](#-environment-setup) &nbsp;·&nbsp;
+[**Test Offline**](#-test-without-the-robot) &nbsp;·&nbsp;
+[**Output Format**](#-output-format-and-hand-off-to-iteach-uois)
+
+</div>
+
+<br>
+
+The HoloLens 2 app and ROS bridge used in the current version of **iTeach**. While the robot works, you see its perception model's predictions in mixed reality. When the model fails, you record a short **HumanPlay** clip, then label the last frame **hands-free** with your eyes and voice. SAM2 turns those points into boxes and masks, which become training data for the next round.
+
+<br>
+
+## 🧩 Part of the iTeach Family
+
+iTeach is split into three repositories, one per module:
+
+<table>
+  <tr>
+    <th width="33%"><a href="https://github.com/IRVLUTD/iTeach">📍 iTeach</a></th>
+    <th width="33%">🥽 iTeachSkillsApp <sub>(this repo)</sub></th>
+    <th width="33%"><a href="https://github.com/IRVLUTD/iTeach-UOIS">🧠 iTeach-UOIS</a></th>
+  </tr>
+  <tr>
+    <td>Project hub: overview, links, HoloLens and robot networking utilities</td>
+    <td>HoloLens 2 app + ROS bridge: record HumanPlay, gaze + voice point prompts, SAM2 preview</td>
+    <td>SAM2 mask propagation, MSMFormer fine-tuning and evaluation</td>
+  </tr>
+</table>
+
+<br>
+
+---
+
+<br>
+
+## 🧭 System Overview
 
 ```mermaid
 flowchart LR
@@ -75,21 +99,43 @@ flowchart LR
     FT -- "fine-tuned checkpoint (f1, f2, …)" --> MSM
 ```
 
-**Who runs what.**
-- The robot is the ROS server. It runs `roscore` and `ros_tcp_endpoint`, and the HoloLens connects to its endpoint.
-- The laptop is a ROS client (`ROS_MASTER_URI=http://<robot-ip>:11311`). It runs the GPU-heavy nodes: the MSMFormer node, the prediction compressor and the recorder with SAM2.
+<br>
 
-**One iTeach round.**
-1. The HoloLens streams `/hololens_stream/compressed`, which is MSMFormer's live segmentation of the robot's view.
-2. When the model fails, the user says **"Begin Capture"**, rearranges the objects (HumanPlay), then says **"Stop Capture"**. `image_publisher_fetch.py` saves the RGB-D clip and sends the last frame back as `label_frame`.
-3. The user looks at each object and says **"True Label"** (positive point) or **"False Label"** (negative point), **"Next Object"** for the next one and **"Erase Label"** to undo. **"Send Label"** publishes the prompts. The laptop runs SAM2 on the points, sends back the box and mask preview, and saves `prompts.json` with `bboxes_xyxy`.
-4. Offline, [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS) propagates masks through the clip and fine-tunes MSMFormer. The new checkpoint is loaded into ①.
+### Who runs what
 
-ROS topics:
+| Machine | Role | Runs |
+|:--|:--|:--|
+| 🤖 **Robot** | ROS **server** | `roscore` and `ros_tcp_endpoint`. The HoloLens connects here. |
+| 💻 **Laptop** | ROS **client** (`ROS_MASTER_URI=http://<robot-ip>:11311`) | The GPU-heavy nodes: MSMFormer ①, prediction compressor ②, recorder + SAM2 ③, RViz ④ |
+| 🥽 **HoloLens 2** | Viewer + labeller | iTechDemo app, connected to the robot's endpoint over TCP |
+
+<br>
+
+### One iTeach round
+
+1. **👀 Watch.** The HoloLens streams `/hololens_stream/compressed`, MSMFormer's live segmentation of the robot's view.
+
+2. **🎬 Capture.** When the model fails, say **"Begin Capture"**, rearrange the objects (HumanPlay), then say **"Stop Capture"**. `image_publisher_fetch.py` saves the RGB-D clip and sends the last frame back as `label_frame`.
+
+3. **🎯 Label.** Look at each object and say:
+   - **"True Label"** to add a positive point, or **"False Label"** to add a negative point
+   - **"Next Object"** to move on to the next object
+   - **"Erase Label"** to undo
+   - **"Send Label"** to publish the prompts
+
+   The laptop runs SAM2 on the points, sends back a box and mask preview, and saves `prompts.json` with `bboxes_xyxy`.
+
+4. **🔁 Improve.** Offline, [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS) propagates masks through the clip and fine-tunes MSMFormer. The new checkpoint is loaded back into ①.
+
+<br>
+
+<details>
+<summary><b>📡 ROS topics</b></summary>
+<br>
 
 | Topic | From → To | Type |
-|---|---|---|
-| `/head_camera/rgb/image_raw`, `/head_camera/depth_registered/image_raw` | robot → MSMFormer node, recorder | `sensor_msgs/Image` |
+|:--|:--|:--|
+| `/head_camera/rgb/image_raw`<br>`/head_camera/depth_registered/image_raw` | robot → MSMFormer node, recorder | `sensor_msgs/Image` |
 | `/seg_image_refined` (also `/seg_image`, `/seg_label`, …) | MSMFormer node → `sub_compress_pub.py`, RViz | `sensor_msgs/Image` |
 | `/hololens_stream/compressed` | `sub_compress_pub.py` → HoloLens (`VideoTopic`) | `sensor_msgs/CompressedImage` |
 | `/head_camera/label_frame/image_raw/compressed` | recorder → HoloLens | `sensor_msgs/CompressedImage` |
@@ -97,63 +143,149 @@ ROS topics:
 | `/hololens/out/record_command` | HoloLens → recorder | `std_msgs/Bool` |
 | `/hololens/out/prompts` | HoloLens → recorder | `std_msgs/String` (JSON) |
 
-Voice commands: *Stream, Begin Capture, Stop Capture, True Label, False Label, Next Object, Send Label, Stop Label, Erase Label, Summary*.
+</details>
 
-## Running the Live System on the Robot
+<details>
+<summary><b>🎙️ Voice commands</b></summary>
+<br>
 
-Five terminals: four on the laptop, one on the robot. Every laptop terminal needs the ROS client environment first:
+| Command | What it does |
+|:--|:--|
+| `Stream` | Open the video panel and subscribe to `VideoTopic` |
+| `Begin Capture` · `Stop Capture` | Start and stop recording the HumanPlay clip |
+| `True Label` · `False Label` | Add a positive / negative point where you are looking |
+| `Next Object` | Start prompts for the next object |
+| `Erase Label` | Remove the last object's prompts |
+| `Send Label` | Publish the prompts to the laptop (SAM2 preview comes back) |
+| `Stop Label` | Send the prompts one last time, clear them and close the labelling view |
+| `Summary` | Toggle the status panel (`summary_info`: recording / labelling / time) |
 
-```bash
-export ROS_MASTER_URI=http://192.168.1.3:11311   # robot IP
-export ROS_HOSTNAME=192.168.1.4                  # this laptop's IP on the robot network
-```
+</details>
+
+<br>
+
+---
+
+<br>
+
+## 🚀 Running the Live System on the Robot
+
+You need five terminals: four on the laptop and one on the robot.
+
+> [!IMPORTANT]
+> Every **laptop** terminal must first point at the robot's ROS master:
+> ```bash
+> export ROS_MASTER_URI=http://192.168.1.3:11311   # robot IP
+> export ROS_HOSTNAME=192.168.1.4                  # this laptop's IP on the robot network
+> ```
+
+<br>
 
 | # | Where | Env | Directory | Command |
-|---|---|---|---|---|
-| 0 | **robot** | robot ROS | `~/catkin_ws` | start `roscore` + the endpoint: `roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000` (wrapped as `setup_iTeach` on our Fetch) |
-| 1 | laptop | `msm38`/`msm39` | `iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift` | `./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name> [--save]` |
-| 2 | laptop | `iteachskills` | `iTeachSkillsApp/Python` | `python sub_compress_pub.py` |
-| 3 | laptop | `iteachskills` | `iTeachSkillsApp` | `python Python/image_publisher_fetch.py` |
-| 4 | laptop | `iteachskills` | `iTeachSkillsApp/Python` | `rviz -d image_viewer.rviz` |
+|:-:|:--|:--|:--|:--|
+| **0** | 🤖 robot | robot ROS | `~/catkin_ws` | `roscore` + `roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000`<br><sub>wrapped as `setup_iTeach` on our Fetch</sub> |
+| **1** | 💻 laptop | `msm38` | `iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift` | `./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name> [--save]` |
+| **2** | 💻 laptop | `iteachskills` | `iTeachSkillsApp/Python` | `python sub_compress_pub.py` |
+| **3** | 💻 laptop | `iteachskills` | `iTeachSkillsApp` | `python Python/image_publisher_fetch.py` |
+| **4** | 💻 laptop | `iteachskills` | `iTeachSkillsApp/Python` | `rviz -d image_viewer.rviz` |
 
-Then start the iTechDemo app on the HoloLens, after uploading the config (next section). Captured scenes go to `Python/data_captured/scene_<MMDD>T<HHMMSS>/` as `rgb/`, `depth/` (uint16, mm), `prompts.json` and `usr_annotation_viz/`. That folder is the input to iTeach-UOIS.
+<br>
 
-To load a model fine-tuned in a previous round in terminal 1, switch the active block in `ros_seg_transformer_test_segmentation_fetch.sh` from `f0` (pretrained) to `f1`/`f2` (`new_ckpts/f*/model_final.pth`).
+Then [upload the config](#-point-the-app-at-your-ros-server) and start the **iTechDemo** app on the HoloLens.
 
-`image_publisher.py` (video file) and `image_publisher_label_only.py` (recorded scene folder) are **offline** stand-ins for terminal 3. Use them to test the app without the robot ([How to Test on Linux](#how-to-test-on-linux)).
+<br>
 
-## Build and Deploy the HoloLens 2 App
+**Where the data goes.** Each capture is saved to `Python/data_captured/scene_<MMDD>T<HHMMSS>/`:
 
-Requirements (Windows only; building has not been tested on other platforms):
+```
+scene_0826T133015/
+├── rgb/                  # 640×480 frames, 000000.png …
+├── depth/                # uint16 depth in millimetres, same names
+├── prompts.json          # gaze-voice points + SAM2 bboxes_xyxy
+└── usr_annotation_viz/   # every SAM2 preview sent back to the HoloLens
+```
 
-- **Unity 2022.3.60f1**. Install this exact editor version through Unity Hub, with the *Universal Windows Platform Build Support* module. Other 2022.3 patch releases may re-import packages differently.
+This folder is the input to [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS#-generating-ground-truth-masks-for-new-humanplay-scenes).
+
+<br>
+
+> [!TIP]
+> **Load the model from a previous round.** In terminal 1, switch the active block in `ros_seg_transformer_test_segmentation_fetch.sh` from `f0` (pretrained) to `f1` / `f2` (`new_ckpts/f*/model_final.pth`).
+
+> [!NOTE]
+> `image_publisher.py` (video file) and `image_publisher_label_only.py` (recorded scene folder) are **offline stand-ins** for terminal 3. See [Test without the robot](#-test-without-the-robot).
+
+<br>
+
+---
+
+<br>
+
+## 🛠️ Build and Deploy the HoloLens 2 App
+
+### Requirements
+
+> [!NOTE]
+> Building is **Windows only**. It has not been tested on other platforms.
+
+- **Unity 2022.3.60f1**: install this exact version through Unity Hub, with the *Universal Windows Platform Build Support* module. Other 2022.3 patch releases may re-import packages differently.
 - **Visual Studio 2022** with the *Universal Windows Platform development* and *Game development with C++* workloads.
-- A HoloLens 2 in Developer Mode with the Windows Device Portal enabled.
+- **HoloLens 2** in Developer Mode, with the Windows Device Portal enabled.
 
-There are two Unity projects under `Unity/`:
+<br>
+
+### Which Unity project?
 
 | Project | Product name | Unity | Status |
-|---|---|---|---|
-| `Unity/iTechDemo` | iTechDemo | 2022.3.60f1 | **Current app, build this one.** It has the gaze + voice commands, SAM2 preview and `summary_info` topic (release 1.0.8). |
-| `Unity/iTeachSkills` | iTeachSkillsAppTest | 2022.3.59f1 | Earlier test project, kept for reference |
+|:--|:--|:--|:--|
+| `Unity/iTechDemo` | iTechDemo | 2022.3.60f1 | ✅ **Current app, build this one.** Gaze + voice commands, SAM2 preview, `summary_info` (release 1.0.8) |
+| `Unity/iTeachSkills` | iTeachSkillsAppTest | 2022.3.59f1 | 🗄️ Earlier test project, kept for reference |
 
-MRTK 2.8.3 and the Mixed Reality OpenXR plugin are vendored as `.tgz` files in `Unity/iTechDemo/Packages/MixedReality/`. [ROS-TCP-Connector](https://github.com/Unity-Technologies/ROS-TCP-Connector) is fetched by Unity from GitHub when the project is opened, so the first open needs internet access.
+MRTK 2.8.3 and the Mixed Reality OpenXR plugin are included as `.tgz` files in `Unity/iTechDemo/Packages/MixedReality/`. [ROS-TCP-Connector](https://github.com/Unity-Technologies/ROS-TCP-Connector) is downloaded from GitHub when the project is first opened, so you need internet access for that.
 
-> ⚠️ `Unity/iTechDemo/Packages/manifest.json` pulls ROS-TCP-Connector from its default branch without a version pin. If a newer upstream release breaks the build, pin it by appending `#v0.7.1` to that URL (the version pinned in `Unity/iTeachSkills`).
+> [!WARNING]
+> `Unity/iTechDemo/Packages/manifest.json` pulls ROS-TCP-Connector from its default branch **without a version pin**. If a newer upstream release breaks the build, pin it by appending `#v0.7.1` to that URL (the version pinned in `Unity/iTeachSkills`).
 
-Steps:
+<br>
 
-1. Open `Unity/iTechDemo` in Unity Hub.
-2. *File → Build Settings*: select **Universal Windows Platform**, set Architecture **ARM64**, and click **Switch Platform**.
-3. Click **Build** into an empty folder. The ROS IP is set at runtime from `ROSConnectionConfig.json` ([below](#point-the-app-at-your-ros-server-rosconnectionconfigjson)), so no rebuild is needed when it changes.
-4. Open the generated `.sln` in Visual Studio 2022 and set *Release / ARM64*. Then use *Project → Publish → Create App Packages → Sideloading* to produce an `.msix`/`.appx`.
+### Steps
+
+1. Open **`Unity/iTechDemo`** in Unity Hub.
+
+2. Go to *File → Build Settings*: select **Universal Windows Platform**, set Architecture to **ARM64**, and click **Switch Platform**.
+
+3. Click **Build** and choose an empty folder.
+   <sub>The ROS IP is read at runtime from `ROSConnectionConfig.json` ([next section](#-point-the-app-at-your-ros-server)), so you don't need to rebuild when it changes.</sub>
+
+4. Open the generated `.sln` in Visual Studio 2022 and set *Release / ARM64*. Then run *Project → Publish → Create App Packages → Sideloading* to produce an `.msix` / `.appx`.
+
 5. Install the package through the Windows Device Portal (*Views → Apps → Deploy apps*).
 
-A video walkthrough of the same Unity → Visual Studio → Device Portal flow (for the earlier iTeach app) is [here](https://www.youtube.com/watch?v=kvzMAMyluJU).
+<br>
 
-## Point the App at Your ROS Server (ROSConnectionConfig.json)
+📺 A video walkthrough of the same Unity → Visual Studio → Device Portal flow (for the earlier iTeach app) is [here](https://www.youtube.com/watch?v=kvzMAMyluJU).
 
-The app reads `ROSConnectionConfig.json` from `Application.persistentDataPath` first. On HoloLens that is the app's **`LocalAppData/<package>/LocalState/`** folder. If no file is there, it falls back to the copy built into the app at `Unity/iTechDemo/Assets/StreamingAssets/ROSConnectionConfig.json`, whose `RosIPAddress` is a lab IP. **You therefore don't need to rebuild the app to change the ROS IP.** Upload your own config to LocalState instead:
+<br>
+
+---
+
+<br>
+
+## 🔌 Point the App at Your ROS Server
+
+The app looks for `ROSConnectionConfig.json` in two places, in this order:
+
+| Order | Location | Notes |
+|:-:|:--|:--|
+| 1️⃣ | **`LocalAppData/<package>/LocalState/`** on the HoloLens | `Application.persistentDataPath`. **Put your config here.** |
+| 2️⃣ | `Unity/iTechDemo/Assets/StreamingAssets/ROSConnectionConfig.json` | Built into the app. Its `RosIPAddress` is a lab IP. |
+
+> [!TIP]
+> Because of this lookup order, **you don't need to rebuild the app to change the ROS IP**. Upload a new config to LocalState instead.
+
+<br>
+
+This is the config used with the Fetch:
 
 ```json
 {
@@ -173,153 +305,185 @@ The app reads `ROSConnectionConfig.json` from `Application.persistentDataPath` f
 }
 ```
 
-This is the config used with the Fetch. Set `RosIPAddress` to the IP of the machine running `ros_tcp_endpoint` (the robot, in the live setup) as seen from the HoloLens. `VideoTopic` selects what the HoloLens shows: `/hololens_stream/compressed` for MSMFormer predictions, or `/head_camera/rgb/image_raw/compressed` for the raw robot view (used by the offline `image_publisher*.py` scripts). The file must contain **all** of these keys, because missing topics are read as empty. Then upload it, either:
+- **`RosIPAddress`** is the IP of the machine running `ros_tcp_endpoint` (the robot, in the live setup), as seen from the HoloLens.
+- **`VideoTopic`** selects what the HoloLens shows:
+  - `/hololens_stream/compressed` for MSMFormer predictions
+  - `/head_camera/rgb/image_raw/compressed` for the raw robot view (used by the offline `image_publisher*.py` scripts)
 
-- **Windows Device Portal:** *System → File explorer → LocalAppData → iTechDemo_… → LocalState* → upload, or
-- **Script** (from [IRVLUTD/iTeach](https://github.com/IRVLUTD/iTeach) `src/`, with `HOLO_DEVICE_IP`, `HOLO_DEVICE_USERNAME`, `HOLO_DEVICE_PASSWORD` set):
-  ```bash
-  python hololens_utils/HoloDevicePortal.py --app_name iTechDemo --file_path ROSConnectionConfig.json
-  ```
+> [!IMPORTANT]
+> The file must contain **all** of these keys. Missing topics are read as empty.
 
-Restart the app after uploading.
+<br>
 
-## Environment Setup
+### Upload it
 
-#### 1. Create Conda Environment
+**Option A: Windows Device Portal**
+*System → File explorer → LocalAppData → iTechDemo_… → LocalState* → upload
 
-- Create conda environment
+**Option B: script** (from [IRVLUTD/iTeach](https://github.com/IRVLUTD/iTeach) `src/`, with `HOLO_DEVICE_IP`, `HOLO_DEVICE_USERNAME`, `HOLO_DEVICE_PASSWORD` set)
+
+```bash
+python hololens_utils/HoloDevicePortal.py --app_name iTechDemo --file_path ROSConnectionConfig.json
+```
+
+Restart the app after uploading. 🔄
+
+<br>
+
+---
+
+<br>
+
+## 📦 Environment Setup
+
+### 1 · Conda environment
 
 ```bash
 mamba create -n iteachskills python=3.11
-```
-
-- Activate conda environment
-
-```bash
 mamba activate iteachskills
-```
 
-- Install PyTorch v2.5.1 with CUDA 11.8
-
-```bash
+# PyTorch 2.5.1 + CUDA 11.8
 python -m pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
-```
 
-- Install ultralytics and the other Python dependencies used in `Python/`
-
-```bash
+# Python dependencies used in Python/
 python -m pip install ultralytics supervision tqdm opencv-python pillow requests --no-cache-dir
 ```
 
-The SAM2 weights (`sam2.1_l.pt`) are downloaded automatically by ultralytics on first use.
+<sub>The SAM2 weights are downloaded automatically by ultralytics the first time they are used.</sub>
 
-#### 2. Install ROS1 Noetic as instructed in [RoboStack](https://robostack.github.io/)
+<br>
 
-- Setup channels
+### 2 · ROS 1 Noetic via [RoboStack](https://robostack.github.io/)
 
 ```bash
+# Channels
 conda config --env --add channels conda-forge
 conda config --env --add channels robostack-staging
 conda config --env --remove channels defaults
-```
 
-- Install ROS1 Noetic (this also provides `rospy`, `cv_bridge`, `tf` and `message_filters`)
-
-```bash
+# ROS Noetic (includes rospy, cv_bridge, tf, message_filters) + ros_numpy
 mamba install ros-noetic-desktop ros-noetic-ros-numpy
-```
 
-- Reactivate conda environment
+# Reactivate
+mamba deactivate && mamba activate iteachskills
 
-```bash
-mamba deactivate
-mamba activate iteachskills
-```
-
-- Install tools for local development
-
-```bash
+# Build tools
 mamba install compilers cmake pkg-config make ninja colcon-common-extensions catkin_tools rosdep
 ```
 
-- Additional dependencies for developing on windows (optional)
+<details>
+<summary>🪟 Extra dependencies for developing on Windows (optional)</summary>
+<br>
 
 ```bash
-# Install the Visual Studio command prompt - if you use Visual Studio 2019:
+# Visual Studio 2019 command prompt
 mamba install vs2019_win-64
 
-# Install the Visual Studio command prompt - if you use Visual Studio 2022:
+# Visual Studio 2022 command prompt
 mamba install vs2022_win-64
 ```
 
-#### 3. Compile `ros_tcp_endpoint` Package in ROS1 Noetic
+</details>
 
-- Clone the `ros_tcp_endpoint` package
+<br>
+
+### 3 · Build `ros_tcp_endpoint`
 
 ```bash
 cd ~/catkin_ws/src
-git clone 'https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git'
-```
+git clone https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git
 
-- Build the `ros_tcp_endpoint` package
-
-```bash
 cd ~/catkin_ws
 catkin_make
 ```
 
-## How to Test on Linux
+<br>
 
-#### Terminal 1: Start ROS1 Noetic
+---
+
+<br>
+
+## 🧪 Test Without the Robot
+
+These steps run the whole app loop on a single machine, fed by a video or a recorded scene instead of the Fetch.
+
+<br>
+
+### 🐧 Linux
+
+**Terminal 1: ROS master**
 
 ```bash
 mamba activate iteachskills
 roscore
 ```
 
-#### Terminal 2: Launch ros_tcp_endpoint
+**Terminal 2: TCP endpoint** (the `tcp_ip` must be reachable from the HoloLens)
 
 ```bash
 mamba activate iteachskills
-# Source Catkin Workspace
 source ~/catkin_ws/devel/setup.bash
-# Launch ros_tcp_endpoint (tcp_ip must be reachable from the HoloLens)
 roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=<this-machine-ip> tcp_port:=10000
 ```
 
-#### Terminal 3: Publish Images from a Video or a Scene Directory
+**Terminal 3: publish images.** Pick one:
 
-1. Publish test images from the bundled `demo.mp4` video (app/UI smoke test)
+| Mode | Command | Output |
+|:--|:--|:--|
+| 🎞️ **Demo video** (app / UI smoke test) | `python Python/image_publisher.py` | `Python/recordings/` |
+| 🗂️ **Recorded scene** (the labelling mode used for the dataset) | `python Python/image_publisher_label_only.py --scene_folder <scene_dir>` | `Python/output/prompts/<scene_name>/prompts.json` |
 
-```bash
-mamba activate iteachskills
-python Python/image_publisher.py
-```
+<sub>`<scene_dir>` must contain an `rgb/` folder of PNG frames. When you stop recording in the app, the **last** frame is sent to the HoloLens for labelling.</sub>
 
-Recorded frames and the prompts are written to `Python/recordings/`.
-
-2. Publish images from a recorded HumanPlay scene directory (the labelling mode used for the dataset)
-
-```bash
-mamba activate iteachskills
-python Python/image_publisher_label_only.py --scene_folder <path_to_scene_dir>
-```
-
-`<path_to_scene_dir>` must contain an `rgb/` folder of PNG frames (see the
-[layout](#output-format-and-hand-off-to-iteach-uois) below). When the user stops
-recording in the app, the **last** frame is sent to the HoloLens for labelling. The prompts
-and the SAM2 boxes are saved to `Python/output/prompts/<scene_name>/prompts.json`.
-
-#### Terminal 4: Run RVIZ to Visualize the Images
+**Terminal 4: RViz**
 
 ```bash
 mamba activate iteachskills
 rviz -d Python/image_viewer.rviz
 ```
 
-## Output Format and Hand-off to iTeach-UOIS
+> [!NOTE]
+> For these offline scripts, set `VideoTopic` to `/head_camera/rgb/image_raw/compressed` in the config.
 
-`prompts.json` written by `image_publisher_label_only.py`:
+<br>
+
+<details>
+<summary><b>🪟 Windows</b></summary>
+<br>
+
+**Terminal 1: ROS master**
+
+```bat
+mamba activate iteachskills
+roscore
+```
+
+**Terminal 2: TCP endpoint** (adjust the path to where you built `ros_tcp_endpoint`)
+
+```bat
+mamba activate iteachskills
+call %USERPROFILE%/catkin_ws/devel/setup.bat
+roslaunch ros_tcp_endpoint endpoint.launch
+```
+
+**Terminal 3: publish test images**
+
+```bat
+mamba activate iteachskills
+python Python/image_publisher.py
+```
+
+</details>
+
+<br>
+
+---
+
+<br>
+
+## 📤 Output Format and Hand-off to iTeach-UOIS
+
+### `prompts.json`
 
 ```json
 {
@@ -330,16 +494,31 @@ rviz -d Python/image_viewer.rviz
 }
 ```
 
-- `prompts`: one entry per object, as sent by the HoloLens. `x`, `y` are normalized to [0, 1], and `y` is measured from the **bottom** of the image. `labels` are SAM point labels (1 = foreground, 0 = background).
-- `bboxes_xyxy`: pixel boxes `[x1, y1, x2, y2]` from running SAM2 on those points on the last frame. This is the key that the mask-propagation step in iTeach-UOIS reads.
+| Key | Meaning |
+|:--|:--|
+| `prompts` | One entry per object, as sent by the HoloLens. `x`, `y` are normalized to [0, 1], and **`y` is measured from the bottom** of the image. `labels` are SAM point labels (1 = foreground, 0 = background). |
+| `bboxes_xyxy` | Pixel boxes `[x1, y1, x2, y2]` from running SAM2 on those points on the last frame. **This is what iTeach-UOIS reads.** |
 
-To convert the points to SAM2 pixel coordinates yourself (e.g. a 640×480 frame):
+<br>
+
+> [!TIP]
+> Older captures without `bboxes_xyxy`? Add them offline:
+> ```bash
+> python Python/sam2_test.py --scene_folder <scene_dir>   # writes bboxes_xyxy back into the prompt file
+> ```
+
+<details>
+<summary>🐍 Convert the points to SAM2 pixel coordinates yourself</summary>
+<br>
 
 ```python
 import json
-W, H = 640, 480
+
+W, H = 640, 480  # frame size
+
 with open("prompts.json") as f:
     prompts = json.load(f)["prompts"]
+
 sam2_point_prompts = []
 for prompt in prompts:
     sam2_points = [
@@ -349,55 +528,35 @@ for prompt in prompts:
     sam2_point_prompts.append(sam2_points)
 ```
 
-If `prompts.json` was recorded without `bboxes_xyxy` (older captures), add them offline:
+</details>
 
-```bash
-python Python/sam2_test.py --scene_folder <path_to_scene_dir>   # writes bboxes_xyxy back into the prompt file
-```
+<br>
 
-**Scene layout expected by the next step** (propagation + training in [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS)):
+### Scene layout expected by iTeach-UOIS
 
 ```
 scene_XXX/
-├── rgb/000000.png, 000001.png, ...   # 640x480 RGB, zero-padded sequential names (time order)
-├── depth/000000.png, ...             # 16-bit depth in millimetres, same names as rgb/
-└── prompts.json                      # copy from Python/output/prompts/<scene_name>/prompts.json
+├── rgb/000000.png, 000001.png, …   # 640×480 RGB, zero-padded sequential names (time order)
+├── depth/000000.png, …             # 16-bit depth in millimetres, same names as rgb/
+└── prompts.json                    # from data_captured/ (live) or output/prompts/<scene>/ (offline)
 ```
 
-Then follow *Generating ground-truth masks* in the iTeach-UOIS README.
+➡️ Next: [**Generating ground-truth masks**](https://github.com/IRVLUTD/iTeach-UOIS#-generating-ground-truth-masks-for-new-humanplay-scenes) in iTeach-UOIS.
 
-## How to Test on Windows
+<br>
 
-#### Terminal 1: Start ROS1 Noetic
+---
 
-```bash
-mamba activate iteachskills
-roscore
-```
+<br>
 
-#### Terminal 2: Launch ros_tcp_endpoint
+## 📚 Citation
 
-```bash
-mamba activate iteachskills
-# Source Catkin Workspace (adjust to where you built ros_tcp_endpoint)
-call %USERPROFILE%/catkin_ws/devel/setup.bat
-# Launch ros_tcp_endpoint
-roslaunch ros_tcp_endpoint endpoint.launch
-```
+If ***iTeach*** helps your research, please cite:
 
-#### Terminal 3: Publish test images
-
-```bash
-mamba activate iteachskills
-python Python/image_publisher.py
-```
-
-## 📚 BibTex
-Please cite ***iTeach*** if it helps your research 🙌:
 ```bibtex
 @misc{padalunkal2024iteach,
   title         = {iTeach: In the Wild Interactive Teaching for Failure-Driven Adaptation of Robot Perception},
-  author        = {Jishnu Jaykumar P and Cole Salvato and Vinaya Bomnale and Jikai Wang and Yu Xiang},
+  author        = {Jishnu Jaykumar P and Cole Salvato and Vinaya Bomnale and Jikai Wang and Ayush Bhardwaj and Jin-Ryong Kim and Yu Xiang},
   year          = {2026},
   eprint        = {2410.09072},
   archivePrefix = {arXiv},
@@ -406,12 +565,24 @@ Please cite ***iTeach*** if it helps your research 🙌:
 }
 ```
 
-## 📬 Contact
-For any clarification, comments, or suggestions, you can choose from the following options:
+<br>
 
-- Join the [discussion forum](https://github.com/IRVLUTD/iTeach/discussions). 💬
-- Report an [issue](https://github.com/IRVLUTD/iTeach/issues). 🛠️
-- Contact [Jishnu](https://jishnujayakumar.github.io/). 📧
+## 📬 Contact
+
+| | |
+|:--|:--|
+| 💬 Questions & ideas | [Discussion forum](https://github.com/IRVLUTD/iTeach/discussions) |
+| 🛠️ Bugs | [Open an issue](https://github.com/IRVLUTD/iTeach/issues) |
+| 📧 Direct | [Jishnu](https://jishnujayakumar.github.io/) |
+
+<br>
 
 ## 🙏 Acknowledgements
-This work was supported by the DARPA Perceptually-enabled Task Guidance (PTG) Program under contract number HR00112220005, the Sony Research Award Program, and the National Science Foundation (NSF) under Grant No.2346528. We thank [Sai Haneesh Allu](https://saihaneeshallu.github.io/) for assistance with the real-world experiments. 🙌
+
+This work was supported by the DARPA Perceptually-enabled Task Guidance (PTG) Program under contract number HR00112220005, the Sony Research Award Program, and the National Science Foundation (NSF) under Grant No. 2346528. We thank [Sai Haneesh Allu](https://saihaneeshallu.github.io/) for assistance with the real-world experiments.
+
+<br>
+
+<div align="center">
+<sub>Built at the <a href="https://labs.utdallas.edu/irvl/">Intelligent Robotics and Vision Lab</a>, The University of Texas at Dallas</sub>
+</div>
