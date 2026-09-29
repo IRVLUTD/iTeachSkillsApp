@@ -54,24 +54,60 @@ iTeach is split into three repositories, one per module:
 
 ## 📑 Contents
 
-<table>
-<tr>
-<td width="50%" valign="top"><kbd>01</kbd> <small>🔎 Understand</small><br><br><b>🧭 <a href="#-system-overview">System Overview</a></b><br><small>How the robot, laptop and HoloLens fit together</small><br><small>↳ <a href="#-the-teaching-loop">Loop</a> · <a href="#️-architecture">Architecture</a> · <a href="#-one-iteach-round">One round</a></small></td>
-<td width="50%" valign="top"><kbd>02</kbd> <small>▶️ Run</small><br><br><b>🚀 <a href="#-running-the-live-system-on-the-robot">Run on the Robot</a></b><br><small>A full iTeach session on the Fetch, in five terminals</small></td>
-</tr>
-<tr>
-<td width="50%" valign="top"><kbd>03</kbd> <small>🧰 Set up</small><br><br><b>🛠️ <a href="#️-build-and-deploy-the-hololens-2-app">Build the HoloLens App</a></b><br><small>Build in Unity and install on the headset</small><br><small>↳ <a href="#requirements">Requirements</a> · <a href="#which-unity-project">Which project</a> · <a href="#steps">Steps</a></small></td>
-<td width="50%" valign="top"><kbd>04</kbd> <small>🧰 Set up</small><br><br><b>🔌 <a href="#-point-the-app-at-your-ros-server">Configure ROS</a></b><br><small>Change the ROS IP or video topic, without rebuilding</small><br><small>↳ <a href="#upload-it">Upload</a></small></td>
-</tr>
-<tr>
-<td width="50%" valign="top"><kbd>05</kbd> <small>🧰 Set up</small><br><br><b>📦 <a href="#-environment-setup">Environment Setup</a></b><br><small>Python, ROS Noetic and the TCP endpoint</small><br><small>↳ <a href="#1--conda-environment">Conda</a> · <a href="#2--ros-1-noetic-via-robostack">ROS</a> · <a href="#3--build-ros_tcp_endpoint">Endpoint</a></small></td>
-<td width="50%" valign="top"><kbd>06</kbd> <small>▶️ Run</small><br><br><b>🧪 <a href="#-test-without-the-robot">Test Offline</a></b><br><small>Try the app with a demo video or a recorded scene</small></td>
-</tr>
-<tr>
-<td width="50%" valign="top"><kbd>07</kbd> <small>📖 Reference</small><br><br><b>📤 <a href="#-output-format-and-hand-off-to-iteach-uois">Output Format</a></b><br><small><code>prompts.json</code> and the hand-off to iTeach-UOIS</small><br><small>↳ <a href="#promptsjson">prompts.json</a> · <a href="#scene-layout-expected-by-iteach-uois">Scene layout</a></small></td>
-<td width="50%" valign="top"><kbd>✦</kbd> <small>📚 MORE</small><br><br><b>📚 <a href="#-citation">Citation</a> · 📬 <a href="#-contact">Contact</a> · 🙏 <a href="#-acknowledgements">Acknowledgements</a></b><br><small>How to cite iTeach, and how to reach us</small></td>
-</tr>
-</table>
+<p align="center">
+<a href="#-system-overview"><img src="media/toc/01-light.svg#gh-light-mode-only" width="49%" alt="01 · System Overview: How the robot, laptop and HoloLens fit together"></a><a href="#-system-overview"><img src="media/toc/01-dark.svg#gh-dark-mode-only" width="49%" alt="01 · System Overview: How the robot, laptop and HoloLens fit together"></a>
+<a href="#-running-the-live-system-on-the-robot"><img src="media/toc/02-light.svg#gh-light-mode-only" width="49%" alt="02 · Run on the Robot: A full iTeach session on the Fetch"></a><a href="#-running-the-live-system-on-the-robot"><img src="media/toc/02-dark.svg#gh-dark-mode-only" width="49%" alt="02 · Run on the Robot: A full iTeach session on the Fetch"></a>
+<a href="#️-build-and-deploy-the-hololens-2-app"><img src="media/toc/03-light.svg#gh-light-mode-only" width="49%" alt="03 · Build the HoloLens App: Build in Unity and install on the headset"></a><a href="#️-build-and-deploy-the-hololens-2-app"><img src="media/toc/03-dark.svg#gh-dark-mode-only" width="49%" alt="03 · Build the HoloLens App: Build in Unity and install on the headset"></a>
+<a href="#-point-the-app-at-your-ros-server"><img src="media/toc/04-light.svg#gh-light-mode-only" width="49%" alt="04 · Configure ROS: Change the ROS IP or video topic, no rebuild"></a><a href="#-point-the-app-at-your-ros-server"><img src="media/toc/04-dark.svg#gh-dark-mode-only" width="49%" alt="04 · Configure ROS: Change the ROS IP or video topic, no rebuild"></a>
+<a href="#-environment-setup"><img src="media/toc/05-light.svg#gh-light-mode-only" width="49%" alt="05 · Environment Setup: Python, ROS Noetic and the TCP endpoint"></a><a href="#-environment-setup"><img src="media/toc/05-dark.svg#gh-dark-mode-only" width="49%" alt="05 · Environment Setup: Python, ROS Noetic and the TCP endpoint"></a>
+<a href="#-test-without-the-robot"><img src="media/toc/06-light.svg#gh-light-mode-only" width="49%" alt="06 · Test Offline: Try the app with a video or a recorded scene"></a><a href="#-test-without-the-robot"><img src="media/toc/06-dark.svg#gh-dark-mode-only" width="49%" alt="06 · Test Offline: Try the app with a video or a recorded scene"></a>
+<a href="#-output-format-and-hand-off-to-iteach-uois"><img src="media/toc/07-light.svg#gh-light-mode-only" width="49%" alt="07 · Output Format: prompts.json and the hand-off to iTeach-UOIS"></a><a href="#-output-format-and-hand-off-to-iteach-uois"><img src="media/toc/07-dark.svg#gh-dark-mode-only" width="49%" alt="07 · Output Format: prompts.json and the hand-off to iTeach-UOIS"></a>
+<a href="#-citation"><img src="media/toc/more-light.svg#gh-light-mode-only" width="49%" alt="✦ · Cite · Contact · Thanks: Citation, contact and acknowledgements"></a><a href="#-citation"><img src="media/toc/more-dark.svg#gh-dark-mode-only" width="49%" alt="✦ · Cite · Contact · Thanks: Citation, contact and acknowledgements"></a>
+</p>
+
+<details>
+<summary><b>🗂️ Full index</b> <sub>(every section and subsection as text links)</sub></summary>
+<br>
+
+<ol>
+  <li><a href="#-system-overview"><b>System Overview</b></a> · How the robot, laptop and HoloLens fit together
+    <ul>
+    <li><a href="#-the-teaching-loop">Loop</a></li>
+    <li><a href="#️-architecture">Architecture</a></li>
+    <li><a href="#-one-iteach-round">One round</a></li>
+    </ul>
+  </li>
+  <li><a href="#-running-the-live-system-on-the-robot"><b>Run on the Robot</b></a> · A full iTeach session on the Fetch</li>
+  <li><a href="#️-build-and-deploy-the-hololens-2-app"><b>Build the HoloLens App</b></a> · Build in Unity and install on the headset
+    <ul>
+    <li><a href="#requirements">Requirements</a></li>
+    <li><a href="#which-unity-project">Which project</a></li>
+    <li><a href="#steps">Steps</a></li>
+    </ul>
+  </li>
+  <li><a href="#-point-the-app-at-your-ros-server"><b>Configure ROS</b></a> · Change the ROS IP or video topic, no rebuild
+    <ul>
+    <li><a href="#upload-it">Upload the config</a></li>
+    </ul>
+  </li>
+  <li><a href="#-environment-setup"><b>Environment Setup</b></a> · Python, ROS Noetic and the TCP endpoint
+    <ul>
+    <li><a href="#1--conda-environment">Conda</a></li>
+    <li><a href="#2--ros-1-noetic-via-robostack">ROS Noetic</a></li>
+    <li><a href="#3--build-ros_tcp_endpoint">Endpoint</a></li>
+    </ul>
+  </li>
+  <li><a href="#-test-without-the-robot"><b>Test Offline</b></a> · Try the app with a video or a recorded scene</li>
+  <li><a href="#-output-format-and-hand-off-to-iteach-uois"><b>Output Format</b></a> · prompts.json and the hand-off to iTeach-UOIS
+    <ul>
+    <li><a href="#promptsjson">prompts.json</a></li>
+    <li><a href="#scene-layout-expected-by-iteach-uois">Scene layout</a></li>
+    </ul>
+  </li>
+  <li><a href="#-citation">Citation</a> · <a href="#-contact">Contact</a> · <a href="#-acknowledgements">Acknowledgements</a></li>
+</ol>
+
+</details>
 
 <br>
 
