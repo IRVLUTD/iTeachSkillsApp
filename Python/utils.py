@@ -1,4 +1,5 @@
 import argparse
+import os
 import random
 import shutil
 import json
@@ -9,9 +10,31 @@ from pathlib import Path
 import concurrent.futures
 import supervision as sv
 from PIL import Image as PILImg, ImageDraw
+import requests
 
 
 CURR_DIR = Path(__file__).resolve().parent
+
+
+def download_file_if_not_exists(url, save_dir):
+    # Extract filename from URL
+    filename = url.split("/")[-1]
+    filepath = os.path.join(save_dir, filename)
+
+    # Check if file already exists
+    if not os.path.exists(filepath):
+        print(f"Downloading {filename}...")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()  # Raise an error for bad status codes
+        os.makedirs(save_dir, exist_ok=True)
+        with open(filepath, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print(f"Downloaded to {filepath}")
+    else:
+        print(f"File already exists at {filepath}")
+
+    return filepath
 
 
 def make_clean_folder(folder):
@@ -38,10 +61,10 @@ def read_bgr_image(file_path):
 
 
 def save_rgb_frames(save_dir, frames):
-    make_clean_folder(save_dir)
+    make_clean_folder(save_dir / "rgb")
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {
-            executor.submit(write_rgb_image, save_dir / f"color_{i:06d}.jpg", frame): i
+            executor.submit(write_rgb_image, save_dir / "rgb" / f"{i:06d}.png", frame): i
             for i, frame in enumerate(frames)
         }
         for future in concurrent.futures.as_completed(futures):
@@ -50,16 +73,26 @@ def save_rgb_frames(save_dir, frames):
 
 
 def save_bgr_frames(save_dir, frames):
-    make_clean_folder(save_dir)
+    make_clean_folder(save_dir/ "rgb")
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {
-            executor.submit(write_bgr_image, save_dir / f"color_{i:06d}.jpg", frame): i
+            executor.submit(write_bgr_image, save_dir / "rgb" / f"{i:06d}.png", frame): i
             for i, frame in enumerate(frames)
         }
         for future in concurrent.futures.as_completed(futures):
             i = futures[future]
             future.result()
 
+def save_depth_frames(save_dir, frames):
+    make_clean_folder(save_dir/ "depth")
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(write_bgr_image, save_dir / "depth" / f"{i:06d}.png", frame): i
+            for i, frame in enumerate(frames)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            i = futures[future]
+            future.result()
 
 def save_data_to_json(file_path, data):
     if isinstance(data, str):
@@ -119,18 +152,26 @@ def annotate(image_source, boxes=None, masks=None):
     )
 
     # Annotators
-    annotators = []
     if boxes is not None:
-        annotators.append(sv.BoxAnnotator())
-    if masks is not None:
-        annotators.append(sv.MaskAnnotator())
-
-    # Apply all annotators in sequence
-    annotated_image = image_source.copy()
-    for annotator in annotators:
-        annotated_image = annotator.annotate(
-            scene=annotated_image, detections=detections
+        annotated_image = sv.BoxAnnotator().annotate(
+            scene=image_source,
+            detections=detections,
+            labels=[ str(label + 1) for label in labels ]
         )
+    if masks is not None:
+        annotated_image = sv.MaskAnnotator().annotate(
+            scene=annotated_image,
+            detections=detections,
+        )
+
+    # # Apply all annotators in sequence
+    # annotated_image = image_source.copy()
+    # for annotator in annotators:
+    #     annotated_image = annotator.annotate(
+    #         scene=annotated_image,
+    #         detections=detections,
+    #         labels=[ str(label) for label in labels ] if isinstance(annotator, sv.BoxAnnotator) else None
+    #     )
 
     return annotated_image
 

@@ -149,10 +149,17 @@ class CameraPublisher:
 
     def _send_prompts_callback(self, msg):
         rospy.loginfo(f"Received prompt: {msg.data}")
-        save_data_to_json(self._save_dir / "prompts.json", msg.data)
-        prompts = json.loads(msg.data)["prompts"]
+        data = json.loads(msg.data)
+        prompts = data["prompts"]
         # self._label_frame = draw_prompts_on_image(self._label_frame, prompts)
-        self._label_frame = self._draw_sam2_results(self._raw_label_frame, prompts)
+        self._label_frame, seg_boxes = self._draw_sam2_results(
+            self._raw_label_frame, prompts
+        )
+        # Store the SAM2 boxes next to the raw point prompts so that
+        # iTeach-UOIS/robokit/propogate_masks_via_bbox_prompt_samv2.py can
+        # consume this file directly (it reads the "bboxes_xyxy" key).
+        data["bboxes_xyxy"] = [box.tolist() for box in seg_boxes]
+        save_data_to_json(self._save_dir / "prompts.json", data)
         self._send_label_frame = True
 
     def _draw_sam2_results(self, image, prompts):
@@ -177,7 +184,7 @@ class CameraPublisher:
             vis = annotate(img, seg_boxes, seg_masks)
         else:
             vis = img
-        return vis
+        return vis, seg_boxes
 
     def _save_recorded_frames(self):
         self._raw_label_frame = self._image_frames[-1].copy()
@@ -190,14 +197,10 @@ def main():
     args_parser.add_argument(
         "--scene_folder",
         type=str,
-        default=None,
-        help="Path to the folder containing the scene folder",
+        required=True,
+        help="Path to a scene folder containing an rgb/ subfolder of PNG frames",
     )
     args = args_parser.parse_args()
-
-    args.scene_folder = (
-        "/home/jikaiwang/GitHub/iTeachSkillsApp/Python/data/training_set/scene5"
-    )
 
     camera_publisher = CameraPublisher(images_source=args.scene_folder, debug=False)
     camera_publisher.run()
