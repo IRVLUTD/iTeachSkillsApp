@@ -52,6 +52,22 @@ iTeach is split into three repositories, one per module:
 
 <br>
 
+## 📑 Contents
+
+<table>
+  <tr><th width="4%">#</th><th width="34%">Section</th><th>Go here to…</th></tr>
+  <tr><td align="center">1</td><td><a href="#-system-overview"><b>🧭 System Overview</b></a></td><td>See how the robot, laptop and HoloLens fit together<br><small>↳ <a href="#-the-teaching-loop">Teaching loop</a> · <a href="#️-architecture">Architecture</a> · <a href="#-one-iteach-round">One iTeach round</a></small></td></tr>
+  <tr><td align="center">2</td><td><a href="#-running-the-live-system-on-the-robot"><b>🚀 Running the Live System on the Robot</b></a></td><td>Run a full iTeach session on the Fetch: env vars + the five terminals</td></tr>
+  <tr><td align="center">3</td><td><a href="#️-build-and-deploy-the-hololens-2-app"><b>🛠️ Build and Deploy the HoloLens 2 App</b></a></td><td>Build the Unity app and install it on the HoloLens<br><small>↳ <a href="#requirements">Requirements</a> · <a href="#which-unity-project">Which project</a> · <a href="#steps">Build steps</a></small></td></tr>
+  <tr><td align="center">4</td><td><a href="#-point-the-app-at-your-ros-server"><b>🔌 Point the App at Your ROS Server</b></a></td><td>Change the ROS IP or video topic, without rebuilding<br><small>↳ <a href="#upload-it">Upload the config</a></small></td></tr>
+  <tr><td align="center">5</td><td><a href="#-environment-setup"><b>📦 Environment Setup</b></a></td><td>Install Python, ROS Noetic and the TCP endpoint<br><small>↳ <a href="#1--conda-environment">Conda</a> · <a href="#2--ros-1-noetic-via-robostack">ROS Noetic</a> · <a href="#3--build-ros_tcp_endpoint">ros_tcp_endpoint</a></small></td></tr>
+  <tr><td align="center">6</td><td><a href="#-test-without-the-robot"><b>🧪 Test Without the Robot</b></a></td><td>Try the app with a demo video or a recorded scene</td></tr>
+  <tr><td align="center">7</td><td><a href="#-output-format-and-hand-off-to-iteach-uois"><b>📤 Output Format and Hand-off to iTeach-UOIS</b></a></td><td>Understand <code>prompts.json</code> and hand the data to iTeach-UOIS<br><small>↳ <a href="#promptsjson">prompts.json</a> · <a href="#scene-layout-expected-by-iteach-uois">Scene layout</a></small></td></tr>
+  <tr><td align="center">·</td><td colspan="2"><a href="#-citation">📚 Citation</a> · <a href="#-contact">📬 Contact</a> · <a href="#-acknowledgements">🙏 Acknowledgements</a></td></tr>
+</table>
+
+<br>
+
 ---
 
 <br>
@@ -203,6 +219,8 @@ sequenceDiagram
 
 <br>
 
+<div align="right"><sub><a href="#-contents">⬆ back to contents</a></sub></div>
+
 ---
 
 <br>
@@ -256,6 +274,8 @@ This folder is the input to [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS
 
 <br>
 
+<div align="right"><sub><a href="#-contents">⬆ back to contents</a></sub></div>
+
 ---
 
 <br>
@@ -305,6 +325,8 @@ MRTK 2.8.3 and the Mixed Reality OpenXR plugin are included as `.tgz` files in `
 📺 A video walkthrough of the same Unity → Visual Studio → Device Portal flow (for the earlier iTeach app) is [here](https://www.youtube.com/watch?v=kvzMAMyluJU).
 
 <br>
+
+<div align="right"><sub><a href="#-contents">⬆ back to contents</a></sub></div>
 
 ---
 
@@ -368,6 +390,8 @@ python hololens_utils/HoloDevicePortal.py --app_name iTechDemo --file_path ROSCo
 Restart the app after uploading. 🔄
 
 <br>
+
+<div align="right"><sub><a href="#-contents">⬆ back to contents</a></sub></div>
 
 ---
 
@@ -437,6 +461,8 @@ catkin_make
 ```
 
 <br>
+
+<div align="right"><sub><a href="#-contents">⬆ back to contents</a></sub></div>
 
 ---
 
@@ -516,6 +542,8 @@ python Python/image_publisher.py
 
 <br>
 
+<div align="right"><sub><a href="#-contents">⬆ back to contents</a></sub></div>
+
 ---
 
 <br>
@@ -583,6 +611,8 @@ scene_XXX/
 ➡️ Next: [**Generating ground-truth masks**](https://github.com/IRVLUTD/iTeach-UOIS#-generating-ground-truth-masks-for-new-humanplay-scenes) in iTeach-UOIS.
 
 <br>
+
+<div align="right"><sub><a href="#-contents">⬆ back to contents</a></sub></div>
 
 ---
 
