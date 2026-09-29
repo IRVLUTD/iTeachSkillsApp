@@ -55,14 +55,14 @@ iTeach is split into three repositories, one per module:
 ## 📑 Contents
 
 <p align="center">
-<a href="#-system-overview"><img src="media/toc/01-light.svg#gh-light-mode-only" width="49%" alt="01 · System Overview: How the robot, laptop and HoloLens fit together"></a><a href="#-system-overview"><img src="media/toc/01-dark.svg#gh-dark-mode-only" width="49%" alt="01 · System Overview: How the robot, laptop and HoloLens fit together"></a>
-<a href="#-running-the-live-system-on-the-robot"><img src="media/toc/02-light.svg#gh-light-mode-only" width="49%" alt="02 · Run on the Robot: A full iTeach session on the Fetch"></a><a href="#-running-the-live-system-on-the-robot"><img src="media/toc/02-dark.svg#gh-dark-mode-only" width="49%" alt="02 · Run on the Robot: A full iTeach session on the Fetch"></a>
-<a href="#️-build-and-deploy-the-hololens-2-app"><img src="media/toc/03-light.svg#gh-light-mode-only" width="49%" alt="03 · Build the HoloLens App: Build in Unity and install on the headset"></a><a href="#️-build-and-deploy-the-hololens-2-app"><img src="media/toc/03-dark.svg#gh-dark-mode-only" width="49%" alt="03 · Build the HoloLens App: Build in Unity and install on the headset"></a>
-<a href="#-point-the-app-at-your-ros-server"><img src="media/toc/04-light.svg#gh-light-mode-only" width="49%" alt="04 · Configure ROS: Change the ROS IP or video topic, no rebuild"></a><a href="#-point-the-app-at-your-ros-server"><img src="media/toc/04-dark.svg#gh-dark-mode-only" width="49%" alt="04 · Configure ROS: Change the ROS IP or video topic, no rebuild"></a>
-<a href="#-environment-setup"><img src="media/toc/05-light.svg#gh-light-mode-only" width="49%" alt="05 · Environment Setup: Python, ROS Noetic and the TCP endpoint"></a><a href="#-environment-setup"><img src="media/toc/05-dark.svg#gh-dark-mode-only" width="49%" alt="05 · Environment Setup: Python, ROS Noetic and the TCP endpoint"></a>
-<a href="#-test-without-the-robot"><img src="media/toc/06-light.svg#gh-light-mode-only" width="49%" alt="06 · Test Offline: Try the app with a video or a recorded scene"></a><a href="#-test-without-the-robot"><img src="media/toc/06-dark.svg#gh-dark-mode-only" width="49%" alt="06 · Test Offline: Try the app with a video or a recorded scene"></a>
-<a href="#-output-format-and-hand-off-to-iteach-uois"><img src="media/toc/07-light.svg#gh-light-mode-only" width="49%" alt="07 · Output Format: prompts.json and the hand-off to iTeach-UOIS"></a><a href="#-output-format-and-hand-off-to-iteach-uois"><img src="media/toc/07-dark.svg#gh-dark-mode-only" width="49%" alt="07 · Output Format: prompts.json and the hand-off to iTeach-UOIS"></a>
-<a href="#-citation"><img src="media/toc/more-light.svg#gh-light-mode-only" width="49%" alt="✦ · Cite · Contact · Thanks: Citation, contact and acknowledgements"></a><a href="#-citation"><img src="media/toc/more-dark.svg#gh-dark-mode-only" width="49%" alt="✦ · Cite · Contact · Thanks: Citation, contact and acknowledgements"></a>
+<a href="#-system-overview"><img src="media/toc/01.svg" width="49%" alt="01 · System Overview: How the robot, laptop and HoloLens fit together"></a>
+<a href="#-running-the-live-system-on-the-robot"><img src="media/toc/02.svg" width="49%" alt="02 · Run on the Robot: A full iTeach session on the Fetch"></a>
+<a href="#️-build-and-deploy-the-hololens-2-app"><img src="media/toc/03.svg" width="49%" alt="03 · Build the HoloLens App: Build in Unity and install on the headset"></a>
+<a href="#-point-the-app-at-your-ros-server"><img src="media/toc/04.svg" width="49%" alt="04 · Configure ROS: Change the ROS IP or video topic, no rebuild"></a>
+<a href="#-environment-setup"><img src="media/toc/05.svg" width="49%" alt="05 · Environment Setup: Python, ROS Noetic and the TCP endpoint"></a>
+<a href="#-test-without-the-robot"><img src="media/toc/06.svg" width="49%" alt="06 · Test Offline: Try the app with a video or a recorded scene"></a>
+<a href="#-output-format-and-hand-off-to-iteach-uois"><img src="media/toc/07.svg" width="49%" alt="07 · Output Format: prompts.json and the hand-off to iTeach-UOIS"></a>
+<a href="#-citation"><img src="media/toc/more.svg" width="49%" alt="✦ · Cite · Contact · Thanks: Citation, contact and acknowledgements"></a>
 </p>
 
 <details>
