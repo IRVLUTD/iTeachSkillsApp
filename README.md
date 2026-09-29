@@ -60,7 +60,7 @@ iTeach is split into three repositories, one per module:
 <a href="#-running-the-live-system-on-the-robot"><img src="media/toc/02.svg" width="49%" alt="02 · Run on the Robot: A full iTeach session on the Fetch"></a>
 <a href="#️-build-and-deploy-the-hololens-2-app"><img src="media/toc/03.svg" width="49%" alt="03 · Build the HoloLens App: Build in Unity and install on the headset"></a>
 <a href="#-point-the-app-at-your-ros-server"><img src="media/toc/04.svg" width="49%" alt="04 · Configure ROS: Required: upload the config to LocalAppData"></a>
-<a href="#-environment-setup"><img src="media/toc/05.svg" width="49%" alt="05 · Environment Setup: Python, ROS Noetic and the TCP endpoint"></a>
+<a href="#-environment-setup"><img src="media/toc/05.svg" width="49%" alt="05 · Environment Setup: Lab-tested: system ROS Noetic + Python 3.8 env"></a>
 <a href="#-test-without-the-robot"><img src="media/toc/06.svg" width="49%" alt="06 · Test Offline: Try the app with a video or a recorded scene"></a>
 <a href="#-output-format-and-hand-off-to-iteach-uois"><img src="media/toc/07.svg" width="49%" alt="07 · Output Format: prompts.json and the hand-off to iTeach-UOIS"></a>
 <a href="#-license"><img src="media/toc/more.svg" width="49%" alt="✦ · License · Cite · Contact: License, citation, contact and thanks"></a>
@@ -98,10 +98,10 @@ iTeach is split into three repositories, one per module:
     <li><a href="#2--upload-it-with-the-windows-device-portal">Upload via Device Portal</a></li>
     </ul>
   </li>
-  <li><a href="#-environment-setup"><b>Environment Setup</b></a> · Python, ROS Noetic and the TCP endpoint
+  <li><a href="#-environment-setup"><b>Environment Setup</b></a> · Lab-tested: system ROS Noetic + Python 3.8 env
     <ul>
-    <li><a href="#1--conda-environment">Conda</a></li>
-    <li><a href="#2--ros-1-noetic-via-robostack">ROS Noetic</a></li>
+    <li><a href="#1--ros-noetic-system-install">ROS Noetic</a></li>
+    <li><a href="#2--conda-environment">Conda</a></li>
     <li><a href="#3--build-ros_tcp_endpoint">Endpoint</a></li>
     </ul>
   </li>
@@ -340,9 +340,9 @@ You need five terminals: four on the laptop and one on the robot.
 |:-:|:--|:--|:--|:--|
 | **0** | 🤖 robot | robot ROS | `~/catkin_ws` | **Start the ROS TCP server:** `roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000`<br><sub>On our Fetch this is the alias `setup_iTeach`. The robot's ROS master (`roscore`) is already running.</sub> |
 | **1** | 💻 laptop | MSMFormer env **with ROS Python packages** (lab: `msm39`) | `iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift` | `./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name> [--save]`<br><sub>Serves the pretrained model; to serve a fine-tuned one, set `MODEL` / `MODEL_CFG` ([how](https://github.com/IRVLUTD/iTeach-UOIS#-live-ros-node-on-the-robot))</sub> |
-| **2** | 💻 laptop | `iteachskills` | `iTeachSkillsApp/Python` | `python sub_compress_pub.py` |
-| **3** | 💻 laptop | `iteachskills` | `iTeachSkillsApp` | `python Python/image_publisher_fetch.py` |
-| **4** | 💻 laptop | `iteachskills` | `iTeachSkillsApp/Python` | `rviz -d image_viewer.rviz` |
+| **2** | 💻 laptop | `hololens-pc` | `iTeachSkillsApp/Python` | `python sub_compress_pub.py` |
+| **3** | 💻 laptop | `hololens-pc` | `iTeachSkillsApp` | `python Python/image_publisher_fetch.py` |
+| **4** | 💻 laptop | `hololens-pc` | `iTeachSkillsApp/Python` | `rviz -d image_viewer.rviz` |
 
 <br>
 
@@ -352,7 +352,7 @@ Run these once per new machine or setup. Each check covers one link in the chain
 
 | # | Check | Command | Expect |
 |:-:|:--|:--|:--|
-| 1 | Laptop env has everything terminals 2–4 import | `python -c "import rospy, cv_bridge, tf, tf2_ros, message_filters, ros_numpy, ultralytics, supervision, numpy; print(numpy.__version__)"` (in `iteachskills`) | No error |
+| 1 | Laptop env has everything terminals 2–4 import | `python -c "import rospy, cv_bridge, tf, tf2_ros, message_filters, ros_numpy, ultralytics, supervision, numpy; print(numpy.__version__)"` (in `hololens-pc`) | No error |
 | 2 | SAM2 weights for terminal 3 | `python -c "from ultralytics import SAM; SAM('sam2_l.pt')"` (run in `iTeachSkillsApp/`, needs internet once) | Downloads/loads without error |
 | 3 | MSMFormer env can run the ROS node | `python -c "import rospy, tf, message_filters, ros_numpy, detectron2, torch; print(torch.cuda.is_available())"` (in the MSMFormer env) | `True` |
 | 4 | Laptop reaches the robot | `ping 192.168.1.3`, then `rostopic hz /head_camera/rgb/image_raw` and `rostopic hz /head_camera/depth_registered/image_raw` | Replies, and a steady rate on both topics |
@@ -547,7 +547,48 @@ The app looks for the config in two places, in this order:
 
 ## 📦 Environment Setup
 
-### 1 · Conda environment
+> [!IMPORTANT]
+> **Lab-tested setup** (the robot laptop): Ubuntu 20.04 with a **system ROS Noetic** install, plus a conda env **`hololens-pc`** (Python 3.8) built from [`Python/requirements-lab.txt`](Python/requirements-lab.txt), which pins the exact package versions of the lab's working environment. Terminal 1 (MSMFormer) uses its own env; see [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS#-live-ros-node-on-the-robot).
+
+### 1 · ROS Noetic (system install)
+
+Install `ros-noetic-desktop-full` following the [ROS Noetic Ubuntu guide](http://wiki.ros.org/noetic/Installation/Ubuntu), then:
+
+```bash
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+```
+
+`rospy`, `cv_bridge`, `tf`, `tf2_ros` and `message_filters` come from this install.
+
+<br>
+
+### 2 · Conda environment
+
+```bash
+conda create -n hololens-pc python=3.8.10
+conda activate hololens-pc
+pip install -r Python/requirements-lab.txt
+```
+
+<sub>Keep Python 3.8: the system ROS Noetic packages are built for it. With other Python versions, `cv_bridge`'s raw-image conversion can fail to load (the live scripts avoid that call, but other tools may not). Check the env with row 1 of the <a href="#-first-run-checklist">first-run checklist</a>.</sub>
+
+<br>
+
+### 3 · Build `ros_tcp_endpoint`
+
+```bash
+cd ~/catkin_ws/src
+git clone https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git
+
+cd ~/catkin_ws
+catkin_make
+```
+
+<details>
+<summary><b>Alternative: RoboStack conda setup</b> <sub>(used for app development, including on Windows; not the setup used on the robot laptop)</sub></summary>
+<br>
+
+**Conda environment (Python 3.11)**
 
 ```bash
 mamba create -n iteachskills python=3.11
@@ -562,9 +603,7 @@ python -m pip install ultralytics supervision tqdm opencv-python pillow requests
 
 <sub>The SAM2 weights are downloaded automatically by ultralytics the first time they are used.</sub>
 
-<br>
-
-### 2 · ROS 1 Noetic via [RoboStack](https://robostack.github.io/)
+**ROS 1 Noetic via [RoboStack](https://robostack.github.io/)**
 
 ```bash
 # Channels
@@ -584,8 +623,6 @@ mamba install compilers cmake pkg-config make ninja colcon-common-extensions cat
 
 <details>
 <summary>🪟 Extra dependencies for developing on Windows (optional)</summary>
-<br>
-
 ```bash
 # Visual Studio 2019 command prompt
 mamba install vs2019_win-64
@@ -598,15 +635,7 @@ mamba install vs2022_win-64
 
 <br>
 
-### 3 · Build `ros_tcp_endpoint`
-
-```bash
-cd ~/catkin_ws/src
-git clone https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git
-
-cd ~/catkin_ws
-catkin_make
-```
+</details>
 
 <br>
 
@@ -627,14 +656,14 @@ These steps run the whole app loop on a single machine, fed by a video or a reco
 **Terminal 1: ROS master**
 
 ```bash
-mamba activate iteachskills
+conda activate hololens-pc
 roscore
 ```
 
 **Terminal 2: TCP endpoint** (the `tcp_ip` must be reachable from the HoloLens)
 
 ```bash
-mamba activate iteachskills
+conda activate hololens-pc
 source ~/catkin_ws/devel/setup.bash
 roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=<this-machine-ip> tcp_port:=10000
 ```
@@ -651,7 +680,7 @@ roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=<this-machine-ip> tcp_port:=1
 **Terminal 4: RViz**
 
 ```bash
-mamba activate iteachskills
+conda activate hololens-pc
 rviz -d Python/image_viewer.rviz
 ```
 
@@ -667,7 +696,7 @@ rviz -d Python/image_viewer.rviz
 **Terminal 1: ROS master**
 
 ```bat
-mamba activate iteachskills
+conda activate hololens-pc
 roscore
 ```
 

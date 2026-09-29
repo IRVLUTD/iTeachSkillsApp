@@ -6,18 +6,26 @@
 
 
 import cv2
+import numpy as np
 import rospy
-from cv_bridge import CvBridge
+import ros_numpy
 from sensor_msgs.msg import Image, CompressedImage
 
 
 def image_callback(msg):
     """Callback to handle the image subscription, compression and publish."""
-    bridge = CvBridge()
-
-    # Convert the ROS Image message to a OpenCV image
+    # Convert the ROS Image message to an OpenCV (BGR) image. ros_numpy is used
+    # instead of cv_bridge.imgmsg_to_cv2, whose compiled part fails to load in
+    # some conda environments (e.g. Python != 3.8 with system ROS Noetic).
     try:
-        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+        arr = ros_numpy.numpify(msg)
+        if msg.encoding == "rgb8":
+            cv_image = np.ascontiguousarray(arr[:, :, ::-1])
+        elif msg.encoding == "bgr8":
+            cv_image = np.ascontiguousarray(arr)
+        else:
+            rospy.logerr("Unsupported encoding %s (expected rgb8 or bgr8)", msg.encoding)
+            return
     except Exception as e:
         rospy.logerr("Error converting image: %s", e)
         return
