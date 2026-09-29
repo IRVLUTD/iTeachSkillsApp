@@ -58,50 +58,61 @@ iTeach is split into three repositories, one per module:
 
 ## 🧭 System Overview
 
+iTeach is a loop: the robot runs a perception model, a human catches its mistakes in mixed reality, and every correction becomes training data for the next model.
+
+<br>
+
+### 🔁 The teaching loop
+
 ```mermaid
 flowchart LR
-    subgraph ROBOT["🤖 Fetch robot · ROS server (e.g. 192.168.1.3)"]
-        CAM["Head RGB-D camera<br/>/head_camera/rgb/image_raw<br/>/head_camera/depth_registered/image_raw"]
-        MASTER(["roscore<br/>ROS master :11311"])
-        EP["ros_tcp_endpoint<br/>:10000"]
-    end
+    A["🤖 Deploy<br/>MSMFormer"] --> B["❌ Failure<br/>spotted in MR"]
+    B --> C["🤲 HumanPlay<br/>+ gaze-voice labels"]
+    C --> D["🎭 SAM2 propagates<br/>masks through the clip"]
+    D --> E["🏋️ Fine-tune<br/>MSMFormer"]
+    E -- "f0 → f1 → f2 …" --> A
 
-    subgraph LAPTOP["💻 Laptop · ROS client (e.g. 192.168.1.4, RTX GPU)"]
-        MSM["① MSMFormer ROS node<br/>ros_seg_transformer_test_segmentation_fetch.sh<br/>(iTeach-UOIS)"]
-        CMP["② sub_compress_pub.py<br/>/seg_image_refined → JPEG"]
-        REC["③ image_publisher_fetch.py<br/>recorder + SAM2 image mode<br/>points → boxes → prompts.json"]
-        RVIZ["④ rviz -d image_viewer.rviz"]
-    end
-
-    subgraph HL["🥽 HoloLens 2 · iTechDemo app"]
-        CFG[/"ROSConnectionConfig.json<br/>LocalAppData/…/LocalState"/]
-        APP["Prediction overlay +<br/>gaze-voice labelling"]
-    end
-
-    subgraph OFF["🗄️ Offline · iTeach-UOIS"]
-        PROP["SAM2 video mode:<br/>propagate masks backwards"]
-        FT["Fine-tune MSMFormer"]
-    end
-
-    CAM --> MASTER
-    MASTER -- "RGB-D" --> MSM
-    MSM -- "/seg_image_refined" --> CMP
-    CMP -- "/hololens_stream/compressed" --> MASTER
-    MASTER -- "RGB-D" --> REC
-    REC -- "label_frame · summary_info" --> MASTER
-    MASTER --> RVIZ
-    MASTER <--> EP
-    CFG -. "RosIPAddress = robot IP<br/>VideoTopic = /hololens_stream/compressed" .-> APP
-    EP <== "TCP" ==> APP
-    APP -- "record_command · prompts" --> EP
-    REC -- "data_captured/scene_*/<br/>rgb/ depth/ prompts.json" --> PROP
-    PROP -- "gt_masks/" --> FT
-    FT -- "fine-tuned checkpoint (f1, f2, …)" --> MSM
+    classDef s fill:#f1f5f9,stroke:#475569,color:#0f172a
+    classDef hot fill:#fee2e2,stroke:#dc2626,color:#450a0a
+    classDef win fill:#dcfce7,stroke:#16a34a,color:#052e16
+    class A,C,D s
+    class B hot
+    class E win
 ```
 
 <br>
 
-### Who runs what
+### 🏗️ Architecture
+
+Three machines work together. Colours show where each piece runs: 🟦 robot · 🟩 laptop · 🟪 HoloLens.
+
+```mermaid
+flowchart LR
+    CAM["📷 <b>Head RGB-D camera</b><br/><sub>🤖 robot</sub>"]
+    MSM["<b>① MSMFormer node</b><br/>segments every frame<br/><sub>💻 laptop</sub>"]
+    REC["<b>③ image_publisher_fetch.py</b><br/>records clips · SAM2 points → boxes<br/><sub>💻 laptop</sub>"]
+    CMP["<b>② sub_compress_pub.py</b><br/>predictions → JPEG<br/><sub>💻 laptop</sub>"]
+    RVIZ["<b>④ RViz</b><br/><sub>💻 laptop</sub>"]
+    EP["🔌 <b>ros_tcp_endpoint</b> :10000<br/>+ roscore :11311<br/><sub>🤖 robot</sub>"]
+    APP["🥽 <b>iTechDemo app</b><br/>live overlay · gaze + voice labels<br/><sub>HoloLens 2</sub>"]
+
+    CAM -- "RGB-D" --> MSM
+    CAM -- "RGB-D" --> REC
+    MSM -- "/seg_image_refined" --> CMP
+    MSM -.-> RVIZ
+    CMP -- "/hololens_stream/compressed" --> EP
+    REC <-- "label_frame · summary_info<br/>record_command · prompts" --> EP
+    EP <== "TCP · Wi-Fi" ==> APP
+
+    classDef robot fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0b1f33
+    classDef laptop fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0b1f33
+    classDef hl fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#0b1f33
+    class CAM,EP robot
+    class MSM,CMP,REC,RVIZ laptop
+    class APP hl
+```
+
+<br>
 
 | Machine | Role | Runs |
 |:--|:--|:--|
@@ -111,21 +122,49 @@ flowchart LR
 
 <br>
 
-### One iTeach round
+### 🎬 One iTeach round
 
-1. **👀 Watch.** The HoloLens streams `/hololens_stream/compressed`, MSMFormer's live segmentation of the robot's view.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as 🧑 User
+    participant H as 🥽 HoloLens
+    participant R as 🤖 Robot
+    participant M as ① MSMFormer
+    participant P as ③ Recorder + SAM2
 
-2. **🎬 Capture.** When the model fails, say **"Begin Capture"**, rearrange the objects (HumanPlay), then say **"Stop Capture"**. `image_publisher_fetch.py` saves the RGB-D clip and sends the last frame back as `label_frame`.
+    rect rgba(37, 99, 235, 0.08)
+    Note over R,M: 👀 Watch
+    R->>M: RGB-D
+    M-->>H: live segmentation overlay (via ② + endpoint)
+    end
 
-3. **🎯 Label.** Look at each object and say:
-   - **"True Label"** to add a positive point, or **"False Label"** to add a negative point
-   - **"Next Object"** to move on to the next object
-   - **"Erase Label"** to undo
-   - **"Send Label"** to publish the prompts
+    rect rgba(220, 38, 38, 0.08)
+    Note over U,P: 🎬 Capture: the model got it wrong
+    U->>H: 🗣️ "Begin Capture"
+    H->>P: record_command = true
+    Note over U,R: 🤲 HumanPlay: rearrange the objects (5–10 s)
+    R->>P: RGB-D frames
+    U->>H: 🗣️ "Stop Capture"
+    H->>P: record_command = false
+    P-->>H: last frame (label_frame)
+    end
 
-   The laptop runs SAM2 on the points, sends back a box and mask preview, and saves `prompts.json` with `bboxes_xyxy`.
+    rect rgba(147, 51, 234, 0.08)
+    Note over U,P: 🎯 Label: hands-free
+    loop every object
+        U->>H: 👁️ gaze + 🗣️ "True Label" / "False Label"
+        U->>H: 🗣️ "Next Object"
+    end
+    U->>H: 🗣️ "Send Label"
+    H->>P: prompts (gaze points)
+    Note over P: 🎭 SAM2: points → boxes + masks
+    P-->>H: preview
+    Note over P: 💾 save rgb/ · depth/ · prompts.json
+    end
+```
 
-4. **🔁 Improve.** Offline, [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS) propagates masks through the clip and fine-tunes MSMFormer. The new checkpoint is loaded back into ①.
+<sub>Afterwards, [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS) propagates the masks through the clip, fine-tunes MSMFormer, and the new checkpoint is loaded back into ①.</sub>
 
 <br>
 
