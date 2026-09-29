@@ -58,7 +58,7 @@ iTeach is split into three repositories, one per module:
 <a href="#-system-overview"><img src="media/toc/01.svg" width="49%" alt="01 · System Overview: How the robot, laptop and HoloLens fit together"></a>
 <a href="#-running-the-live-system-on-the-robot"><img src="media/toc/02.svg" width="49%" alt="02 · Run on the Robot: A full iTeach session on the Fetch"></a>
 <a href="#️-build-and-deploy-the-hololens-2-app"><img src="media/toc/03.svg" width="49%" alt="03 · Build the HoloLens App: Build in Unity and install on the headset"></a>
-<a href="#-point-the-app-at-your-ros-server"><img src="media/toc/04.svg" width="49%" alt="04 · Configure ROS: Change the ROS IP or video topic, no rebuild"></a>
+<a href="#-point-the-app-at-your-ros-server"><img src="media/toc/04.svg" width="49%" alt="04 · Configure ROS: Required: upload the config to LocalAppData"></a>
 <a href="#-environment-setup"><img src="media/toc/05.svg" width="49%" alt="05 · Environment Setup: Python, ROS Noetic and the TCP endpoint"></a>
 <a href="#-test-without-the-robot"><img src="media/toc/06.svg" width="49%" alt="06 · Test Offline: Try the app with a video or a recorded scene"></a>
 <a href="#-output-format-and-hand-off-to-iteach-uois"><img src="media/toc/07.svg" width="49%" alt="07 · Output Format: prompts.json and the hand-off to iTeach-UOIS"></a>
@@ -85,9 +85,10 @@ iTeach is split into three repositories, one per module:
     <li><a href="#steps">Steps</a></li>
     </ul>
   </li>
-  <li><a href="#-point-the-app-at-your-ros-server"><b>Configure ROS</b></a> · Change the ROS IP or video topic, no rebuild
+  <li><a href="#-point-the-app-at-your-ros-server"><b>Configure ROS</b></a> · Required: upload the config to LocalAppData
     <ul>
-    <li><a href="#upload-it">Upload the config</a></li>
+    <li><a href="#1--prepare-rosconnectionconfigjson">Prepare</a></li>
+    <li><a href="#2--upload-it-with-the-windows-device-portal">Upload via Device Portal</a></li>
     </ul>
   </li>
   <li><a href="#-environment-setup"><b>Environment Setup</b></a> · Python, ROS Noetic and the TCP endpoint
@@ -319,7 +320,8 @@ You need five terminals: four on the laptop and one on the robot.
 
 <br>
 
-Then [upload the config](#-point-the-app-at-your-ros-server) and start the **iTechDemo** app on the HoloLens.
+> [!CAUTION]
+> **Before starting the app:** make sure `ROSConnectionConfig.json`, with `RosIPAddress` set to the robot, is in the HoloLens **`LocalAppData` → `iTechDemo_…` → `LocalState`** folder. It's uploaded through the Device Portal web tool, see [**Point the App at Your ROS Server**](#-point-the-app-at-your-ros-server). Then start **iTechDemo** on the HoloLens.
 
 <br>
 
@@ -391,6 +393,8 @@ MRTK 2.8.3 and the Mixed Reality OpenXR plugin are included as `.tgz` files in `
 
 5. Install the package through the Windows Device Portal (*Views → Apps → Deploy apps*).
 
+6. **Upload `ROSConnectionConfig.json` to `LocalAppData` → `iTechDemo_…` → `LocalState`** in the same Device Portal. ⚠️ Required. [How →](#-point-the-app-at-your-ros-server)
+
 <br>
 
 📺 A video walkthrough of the same Unity → Visual Studio → Device Portal flow (for the earlier iTeach app) is [here](https://www.youtube.com/watch?v=kvzMAMyluJU).
@@ -405,17 +409,12 @@ MRTK 2.8.3 and the Mixed Reality OpenXR plugin are included as `.tgz` files in `
 
 ## 🔌 Point the App at Your ROS Server
 
-The app looks for `ROSConnectionConfig.json` in two places, in this order:
-
-| Order | Location | Notes |
-|:-:|:--|:--|
-| 1️⃣ | **`LocalAppData/<package>/LocalState/`** on the HoloLens | `Application.persistentDataPath`. **Put your config here.** |
-| 2️⃣ | `Unity/iTechDemo/Assets/StreamingAssets/ROSConnectionConfig.json` | Built into the app. Its `RosIPAddress` is a lab IP. |
-
-> [!TIP]
-> Because of this lookup order, **you don't need to rebuild the app to change the ROS IP**. Upload a new config to LocalState instead.
+> [!CAUTION]
+> **Required before the first session:** upload **`ROSConnectionConfig.json`** to the app's **`LocalAppData` → `iTechDemo_…` → `LocalState`** folder on the HoloLens, using the **Windows Device Portal** (the HoloLens web tool). Without it, the app falls back to a built-in lab IP and **will not connect to your robot**.
 
 <br>
+
+### 1 · Prepare `ROSConnectionConfig.json`
 
 This is the config used with the Fetch:
 
@@ -437,28 +436,61 @@ This is the config used with the Fetch:
 }
 ```
 
-- **`RosIPAddress`** is the IP of the machine running `ros_tcp_endpoint` (the robot, in the live setup), as seen from the HoloLens.
-- **`VideoTopic`** selects what the HoloLens shows:
-  - `/hololens_stream/compressed` for MSMFormer predictions
-  - `/head_camera/rgb/image_raw/compressed` for the raw robot view (used by the offline `image_publisher*.py` scripts)
+| Key | Set it to |
+|:--|:--|
+| `RosIPAddress` | IP of the machine running `ros_tcp_endpoint` (**the robot** in the live setup), as seen from the HoloLens |
+| `RosPort` | The endpoint's `tcp_port` (`10000`) |
+| `VideoTopic` | `/hololens_stream/compressed` for MSMFormer predictions, or `/head_camera/rgb/image_raw/compressed` for the raw view (offline `image_publisher*.py` scripts) |
+| `ShowHud` | `true` shows the ROS-TCP-Connector status overlay, which is handy for checking the connection |
 
 > [!IMPORTANT]
-> The file must contain **all** of these keys. Missing topics are read as empty.
+> - The file name must be exactly **`ROSConnectionConfig.json`**.
+> - Keep **all** keys. Missing topics are read as empty.
+> - Save it as plain UTF-8 **without a BOM**. The app reads the raw bytes, so a BOM breaks parsing.
 
 <br>
 
-### Upload it
+### 2 · Upload it with the Windows Device Portal
 
-**Option A: Windows Device Portal**
-*System → File explorer → LocalAppData → iTechDemo_… → LocalState* → upload
+1. **Find the HoloLens IP.** On the headset: *Settings → Network & Internet → Wi-Fi → Advanced options*.
+2. **Open the Device Portal.** In a browser on a PC on the same network, go to **`https://<HoloLens-IP>`** and accept the self-signed certificate warning.
+3. **Log in** with the Device Portal username and password you set when enabling Developer Mode.
+4. **Open the file explorer.** In the left menu: *System → File explorer*.
+5. **Go to the app's folder:** **`LocalAppData`** → **`iTechDemo_<publisher-id>`** → **`LocalState`**.
+6. **Upload.** At the bottom of the page, choose `ROSConnectionConfig.json` and click **Upload**. The file should now be listed in `LocalState`.
+7. **Restart the app.** Close and reopen iTechDemo on the headset, or use *Views → Apps* in the portal.
 
-**Option B: script** (from [IRVLUTD/iTeach](https://github.com/IRVLUTD/iTeach) `src/`, with `HOLO_DEVICE_IP`, `HOLO_DEVICE_USERNAME`, `HOLO_DEVICE_PASSWORD` set)
+<details>
+<summary>⌨️ <b>Alternative: upload from the command line</b></summary>
+<br>
+
+From [IRVLUTD/iTeach](https://github.com/IRVLUTD/iTeach) `src/`, with the Device Portal login in the environment:
 
 ```bash
+export HOLO_DEVICE_IP=<HoloLens-IP>
+export HOLO_DEVICE_USERNAME=<device-portal-username>
+export HOLO_DEVICE_PASSWORD=<device-portal-password>
+
 python hololens_utils/HoloDevicePortal.py --app_name iTechDemo --file_path ROSConnectionConfig.json
 ```
 
-Restart the app after uploading. 🔄
+This uploads to the same `LocalAppData/iTechDemo_…/LocalState` folder.
+
+</details>
+
+<br>
+
+### Why LocalAppData?
+
+The app looks for the config in two places, in this order:
+
+| Order | Location | Notes |
+|:-:|:--|:--|
+| 1️⃣ | **`LocalAppData/iTechDemo_…/LocalState/`** on the HoloLens | Unity's `Application.persistentDataPath`. **Your config goes here.** |
+| 2️⃣ | `Unity/iTechDemo/Assets/StreamingAssets/ROSConnectionConfig.json` | Built into the app. Its `RosIPAddress` is a lab IP. |
+
+> [!TIP]
+> Because the LocalState copy wins, **you never need to rebuild the app to change the ROS IP or topics**. Upload a new file and restart the app.
 
 <br>
 
