@@ -8,6 +8,7 @@
 
 [![Project Page](https://img.shields.io/badge/Project-Page-2ea44f?style=for-the-badge)](https://irvlutd.github.io/iTeach/)
 [![arXiv](https://img.shields.io/badge/arXiv-2410.09072-b31b1b?style=for-the-badge)](https://arxiv.org/abs/2410.09072)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
 ![Unity](https://img.shields.io/badge/Unity-2022.3.60f1-000000?logo=unity&logoColor=white)
 ![HoloLens 2](https://img.shields.io/badge/HoloLens-2-0078D4?logo=microsoft&logoColor=white)
@@ -62,7 +63,7 @@ iTeach is split into three repositories, one per module:
 <a href="#-environment-setup"><img src="media/toc/05.svg" width="49%" alt="05 · Environment Setup: Python, ROS Noetic and the TCP endpoint"></a>
 <a href="#-test-without-the-robot"><img src="media/toc/06.svg" width="49%" alt="06 · Test Offline: Try the app with a video or a recorded scene"></a>
 <a href="#-output-format-and-hand-off-to-iteach-uois"><img src="media/toc/07.svg" width="49%" alt="07 · Output Format: prompts.json and the hand-off to iTeach-UOIS"></a>
-<a href="#-citation"><img src="media/toc/more.svg" width="49%" alt="✦ · Cite · Contact · Thanks: Citation, contact and acknowledgements"></a>
+<a href="#-license"><img src="media/toc/more.svg" width="49%" alt="✦ · License · Cite · Contact: License, citation, contact and thanks"></a>
 </p>
 
 <details>
@@ -105,7 +106,7 @@ iTeach is split into three repositories, one per module:
     <li><a href="#scene-layout-expected-by-iteach-uois">Scene layout</a></li>
     </ul>
   </li>
-  <li><a href="#-citation">Citation</a> · <a href="#-contact">Contact</a> · <a href="#-acknowledgements">Acknowledgements</a></li>
+  <li><a href="#-license">License</a> · <a href="#-citation">Citation</a> · <a href="#-contact">Contact</a> · <a href="#-acknowledgements">Thanks</a></li>
 </ol>
 
 </details>
@@ -718,6 +719,14 @@ scene_XXX/
 <div align="right"><sub><a href="#-contents">⬆ back to contents</a></sub></div>
 
 ---
+
+<br>
+
+## 📜 License
+
+Released under the [**MIT License**](LICENSE), © 2024-2026 Intelligent Robotics and Vision Lab (IRVL), The University of Texas at Dallas.
+
+<sub>Third-party packages bundled with the Unity projects (MRTK, OpenXR, ROS-TCP-Connector) keep their own licenses.</sub>
 
 <br>
 
