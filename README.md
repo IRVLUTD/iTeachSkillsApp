@@ -313,7 +313,7 @@ You need five terminals: four on the laptop and one on the robot.
 
 | # | Where | Env | Directory | Command |
 |:-:|:--|:--|:--|:--|
-| **0** | 🤖 robot | robot ROS | `~/catkin_ws` | `roscore` + `roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000`<br><sub>wrapped as `setup_iTeach` on our Fetch</sub> |
+| **0** | 🤖 robot | robot ROS | `~/catkin_ws` | **Start the ROS TCP server:** `roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000`<br><sub>On our Fetch this is the alias `setup_iTeach`. The robot's ROS master (`roscore`) is already running.</sub> |
 | **1** | 💻 laptop | `msm38` | `iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift` | `./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name> [--save]` |
 | **2** | 💻 laptop | `iteachskills` | `iTeachSkillsApp/Python` | `python sub_compress_pub.py` |
 | **3** | 💻 laptop | `iteachskills` | `iTeachSkillsApp` | `python Python/image_publisher_fetch.py` |
