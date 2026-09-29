@@ -187,6 +187,26 @@ sequenceDiagram
     end
 ```
 
+<br>
+
+**What it looks like**
+
+<p align="center">
+  <img src="media/humanplay.gif" width="55%" alt="HumanPlay interaction">
+  <br>
+  <sub><i>🎬 Capture: the human rearranges objects (HumanPlay) while a short 5–10 s RGB-D clip is recorded.</i></sub>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="media/iteach-uois-annotation.webp" width="90%" alt="Gaze + voice annotation on HoloLens 2">
+  <br>
+  <sub><i>🎯 Label: eye-gaze places point prompts on the final frame; a voice command triggers SAM2 to turn them into bounding-box labels.</i></sub>
+</p>
+
+<br>
+
 <sub>Afterwards, [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS) propagates the masks through the clip, fine-tunes MSMFormer, and the new checkpoint is loaded back into ①.</sub>
 
 <br>
@@ -233,6 +253,14 @@ sequenceDiagram
 <br>
 
 ## 🚀 Running the Live System on the Robot
+
+<p align="center">
+  <img src="media/system-setup.webp" width="80%" alt="Deployment setup">
+  <br>
+  <sub><i>The deployed setup: Fetch with the laptop on board, and a human wearing the HoloLens 2.</i></sub>
+</p>
+
+<br>
 
 You need five terminals: four on the laptop and one on the robot.
 
