@@ -336,13 +336,37 @@ You need five terminals: four on the laptop and one on the robot.
 
 <br>
 
-| # | Where | Env | Directory | Command |
-|:-:|:--|:--|:--|:--|
-| **0** | 🤖 robot | robot ROS | `~/catkin_ws` | **Start the ROS TCP server:** `roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000`<br><sub>On our Fetch this is the alias `setup_iTeach`. The robot's ROS master (`roscore`) is already running.</sub> |
-| **1** | 💻 laptop | MSMFormer env **with ROS Python packages** (lab: `msm39`) | `iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift` | `./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name> [--save]`<br><sub>Serves the pretrained model; to serve a fine-tuned one, set `MODEL` / `MODEL_CFG` ([how](https://github.com/IRVLUTD/iTeach-UOIS#-live-ros-node-on-the-robot))</sub> |
-| **2** | 💻 laptop | `hololens-pc` | `iTeachSkillsApp/Python` | `python sub_compress_pub.py` |
-| **3** | 💻 laptop | `hololens-pc` | `iTeachSkillsApp` | `python Python/image_publisher_fetch.py` |
-| **4** | 💻 laptop | `hololens-pc` | `iTeachSkillsApp/Python` | `rviz -d image_viewer.rviz` |
+| # | Machine | Env | Runs |
+|:-:|:--|:--|:--|
+| **0** | 🤖 robot | robot ROS | ROS TCP server (our alias: `setup_iTeach`; the robot's `roscore` is already running) |
+| **1** | 💻 laptop | `msm39` + system ROS | ① MSMFormer node |
+| **2** | 💻 laptop | `hololens-pc` | ② prediction compressor → HoloLens stream |
+| **3** | 💻 laptop | `hololens-pc` | ③ recorder + SAM2 labelling |
+| **4** | 💻 laptop | `hololens-pc` | ④ RViz |
+
+```bash
+# ── Terminal 0 · robot ───────────────────────────────────────────────
+cd ~/catkin_ws
+roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000   # = setup_iTeach
+
+# ── Terminal 1 · laptop · msm39 ──────────────────────────────────────
+cd iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift
+./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name> [--save]
+
+# ── Terminal 2 · laptop · hololens-pc ────────────────────────────────
+cd iTeachSkillsApp/Python
+python sub_compress_pub.py
+
+# ── Terminal 3 · laptop · hololens-pc ────────────────────────────────
+cd iTeachSkillsApp
+python Python/image_publisher_fetch.py
+
+# ── Terminal 4 · laptop · hololens-pc ────────────────────────────────
+cd iTeachSkillsApp/Python
+rviz -d image_viewer.rviz
+```
+
+<sub>Terminal 1 serves the pretrained model. To serve a fine-tuned one, see the tip below.</sub>
 
 <br>
 
@@ -350,17 +374,37 @@ You need five terminals: four on the laptop and one on the robot.
 
 Run these once per new machine or setup. Each check covers one link in the chain, so a failure points to the step that needs fixing.
 
-| # | Check | Command | Expect |
-|:-:|:--|:--|:--|
-| 1 | Laptop env has everything terminals 2–4 import | `python -c "import rospy, cv_bridge, tf, tf2_ros, message_filters, ros_numpy, ultralytics, supervision, numpy; print(numpy.__version__)"` (in `hololens-pc`) | No error |
-| 2 | SAM2 weights for terminal 3 | `python -c "from ultralytics import SAM; SAM('sam2_l.pt')"` (run in `iTeachSkillsApp/`, needs internet once) | Downloads/loads without error |
-| 3 | MSMFormer env can run the ROS node | `python -c "import rospy, tf, message_filters, ros_numpy, detectron2, torch; print(torch.cuda.is_available())"` (in the MSMFormer env) | `True` |
-| 4 | Laptop reaches the robot | `ping 192.168.1.3`, then `rostopic hz /head_camera/rgb/image_raw` and `rostopic hz /head_camera/depth_registered/image_raw` | Replies, and a steady rate on both topics |
-| 5 | Terminal 1 is producing predictions | `rostopic hz /seg_image_refined` | A steady rate |
-| 6 | Terminal 2 is feeding the HoloLens | `rostopic hz /hololens_stream/compressed` | A steady rate |
-| 7 | HoloLens is connected | `"ShowHud": true` in the uploaded config, then restart the app | The HUD shows the connection to `192.168.1.3:10000`, and the prediction overlay appears after **"Stream"** |
-| 8 | GPU has room for terminals 1 and 3 together | `nvidia-smi` while both run | Memory is not at the limit |
-| 9 | A capture is complete | After **"Stop Capture"** → **"Send Label"**: `ls Python/data_captured/scene_*/{rgb,depth} \| head` and `cat Python/data_captured/scene_*/prompts.json` | `rgb/` and `depth/` hold the same file names; `bboxes_xyxy` has one box per labelled object |
+```bash
+# ① laptop env (hololens-pc) has everything terminals 2–4 import         → no error
+python -c "import rospy, cv_bridge, tf, tf2_ros, message_filters, ros_numpy, ultralytics, supervision, numpy; print(numpy.__version__)"
+
+# ② SAM2 weights for terminal 3 (run in iTeachSkillsApp/, internet once) → loads without error
+python -c "from ultralytics import SAM; SAM('sam2_l.pt')"
+
+# ③ MSMFormer env (msm39) can run the ROS node                          → True
+python -c "import rospy, tf, message_filters, ros_numpy, detectron2, torch; print(torch.cuda.is_available())"
+
+# ④ laptop reaches the robot                                            → replies, steady rates on both topics
+ping 192.168.1.3
+rostopic hz /head_camera/rgb/image_raw
+rostopic hz /head_camera/depth_registered/image_raw
+
+# ⑤ terminal 1 is producing predictions                                 → steady rate
+rostopic hz /seg_image_refined
+
+# ⑥ terminal 2 is feeding the HoloLens                                  → steady rate
+rostopic hz /hololens_stream/compressed
+
+# ⑦ HoloLens is connected: upload the config with "ShowHud": true and restart the app
+#                                          → HUD shows 192.168.1.3:10000; overlay appears after "Stream"
+
+# ⑧ GPU has room for terminals 1 and 3 together                         → memory not at the limit
+nvidia-smi
+
+# ⑨ a capture is complete (after "Stop Capture" → "Send Label")         → same names in rgb/ and depth/,
+ls Python/data_captured/scene_*/{rgb,depth} | head                     #   one bboxes_xyxy box per object
+cat Python/data_captured/scene_*/prompts.json
+```
 
 <br>
 
@@ -385,7 +429,10 @@ This folder is the input to [iTeach-UOIS](https://github.com/IRVLUTD/iTeach-UOIS
 
 > [!TIP]
 > **Serve the model from a previous round.** Start terminal 1 with the fine-tuned run's checkpoint and config:
-> `MODEL=MSMFormer/<out_dir>/model_final.pth MODEL_CFG=MSMFormer/<out_dir>/config.yaml ./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name>`
+> ```bash
+> MODEL=MSMFormer/<out_dir>/model_final.pth MODEL_CFG=MSMFormer/<out_dir>/config.yaml \
+>   ./experiments/scripts/ros_seg_transformer_test_segmentation_fetch.sh 0 <task_name>
+> ```
 
 > [!NOTE]
 > `image_publisher.py` (video file) and `image_publisher_label_only.py` (recorded scene folder) are **offline stand-ins** for terminal 3. See [Test without the robot](#-test-without-the-robot).
@@ -570,7 +617,7 @@ conda activate hololens-pc
 pip install -r Python/requirements-lab.txt
 ```
 
-<sub>Keep Python 3.8: the system ROS Noetic packages are built for it. With other Python versions, `cv_bridge`'s raw-image conversion can fail to load (the live scripts avoid that call, but other tools may not). Check the env with row 1 of the <a href="#-first-run-checklist">first-run checklist</a>.</sub>
+<sub>Keep Python 3.8: the system ROS Noetic packages are built for it. With other Python versions, `cv_bridge`'s raw-image conversion can fail to load (the live scripts avoid that call, but other tools may not). Check the env with check ① of the <a href="#-first-run-checklist">first-run checklist</a>.</sub>
 
 <br>
 
