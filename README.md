@@ -2,6 +2,9 @@
 
 # 🥽 iTeachSkillsApp
 
+> Addresses below are placeholders — `<ROBOT_IP>`, `<LAPTOP_IP>`, `<HOLOLENS_IP>`,
+> `<ROBOT_WLAN_IP>`, `<HOTSPOT_GW>`. Substitute the addresses on your own network.
+
 ### Hands-free, gaze + voice labelling on HoloLens 2 for [iTeach](https://irvlutd.github.io/iTeach/)
 
 <br>
@@ -312,12 +315,12 @@ This is the lab's setup, taken from the laptop's saved network profiles:
 
 | Link | How | Addresses |
 |:--|:--|:--|
-| 🤖 Robot ↔ 💻 laptop | Wired Ethernet (laptop profile with a static IP) | robot `192.168.1.3`, laptop `192.168.1.4/24` |
-| 🥽 HoloLens ↔ 💻 laptop | The laptop's Wi-Fi **hotspot** (NetworkManager, IPv4 method *Shared to other computers*) | HoloLens gets `10.42.0.x` (e.g. `10.42.0.150`) |
-| 🥽 HoloLens → 🤖 robot endpoint | Through the laptop: a *Shared* hotspot forwards its clients' traffic to the laptop's other networks | `RosIPAddress` = `192.168.1.3`, port `10000` |
+| 🤖 Robot ↔ 💻 laptop | Wired Ethernet (laptop profile with a static IP) | robot `<ROBOT_IP>`, laptop `<LAPTOP_IP>/24` |
+| 🥽 HoloLens ↔ 💻 laptop | The laptop's Wi-Fi **hotspot** (NetworkManager, IPv4 method *Shared to other computers*) | HoloLens gets `<HOTSPOT_SUBNET>.x` (e.g. `<HOLOLENS_IP>`) |
+| 🥽 HoloLens → 🤖 robot endpoint | Through the laptop: a *Shared* hotspot forwards its clients' traffic to the laptop's other networks | `RosIPAddress` = `<ROBOT_IP>`, port `10000` |
 
-- **ROS on the robot** must advertise an address the laptop can reach (`192.168.1.3`), for example with `ROS_IP=192.168.1.3` in the robot's environment.
-- **Quick checks from the laptop:** `ping 192.168.1.3`, then `rostopic hz /head_camera/rgb/image_raw` (after the exports below).
+- **ROS on the robot** must advertise an address the laptop can reach (`<ROBOT_IP>`), for example with `ROS_IP=<ROBOT_IP>` in the robot's environment.
+- **Quick checks from the laptop:** `ping <ROBOT_IP>`, then `rostopic hz /head_camera/rgb/image_raw` (after the exports below).
 - **Check from the HoloLens:** set `"ShowHud": true` in the config to see the ROS-TCP-Connector connection status.
 - The Device Portal and the `HoloDevicePortal.py` upload script reach the HoloLens at its hotspot IP (`HOLO_DEVICE_IP`).
 
@@ -330,8 +333,8 @@ You need five terminals: four on the laptop and one on the robot.
 > [!IMPORTANT]
 > Every **laptop** terminal must first point at the robot's ROS master:
 > ```bash
-> export ROS_MASTER_URI=http://192.168.1.3:11311   # robot IP
-> export ROS_HOSTNAME=192.168.1.4                  # this laptop's IP on the robot network
+> export ROS_MASTER_URI=http://<ROBOT_IP>:11311   # robot IP
+> export ROS_HOSTNAME=<LAPTOP_IP>                  # this laptop's IP on the robot network
 > ```
 
 <br>
@@ -347,7 +350,7 @@ You need five terminals: four on the laptop and one on the robot.
 ```bash
 # ── Terminal 0 · robot ───────────────────────────────────────────────
 cd ~/catkin_ws
-roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=192.168.1.3 tcp_port:=10000   # = setup_iTeach
+roslaunch ros_tcp_endpoint endpoint.launch tcp_ip:=<ROBOT_IP> tcp_port:=10000   # = setup_iTeach
 
 # ── Terminal 1 · laptop · msm39 ──────────────────────────────────────
 cd iTeach-UOIS/uois-models/UnseenObjectsWithMeanShift
@@ -385,7 +388,7 @@ python -c "from ultralytics import SAM; SAM('sam2_l.pt')"
 python -c "import rospy, tf, message_filters, ros_numpy, detectron2, torch; print(torch.cuda.is_available())"
 
 # ④ laptop reaches the robot                                            → replies, steady rates on both topics
-ping 192.168.1.3
+ping <ROBOT_IP>
 rostopic hz /head_camera/rgb/image_raw
 rostopic hz /head_camera/depth_registered/image_raw
 
@@ -396,7 +399,7 @@ rostopic hz /seg_image_refined
 rostopic hz /hololens_stream/compressed
 
 # ⑦ HoloLens is connected: upload the config with "ShowHud": true and restart the app
-#                                          → HUD shows 192.168.1.3:10000; overlay appears after "Stream"
+#                                          → HUD shows <ROBOT_IP>:10000; overlay appears after "Stream"
 
 # ⑧ GPU has room for terminals 1 and 3 together                         → memory not at the limit
 nvidia-smi
@@ -512,7 +515,7 @@ This is the config used with the Fetch:
 
 ```json
 {
-  "RosIPAddress": "192.168.1.3",
+  "RosIPAddress": "<ROBOT_IP>",
   "RosPort": 10000,
   "KeepaliveTime": 1,
   "NetworkTimeoutSeconds": 3,
