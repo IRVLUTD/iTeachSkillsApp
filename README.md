@@ -80,8 +80,9 @@ iTeach is split into three repositories, one per module:
   </li>
   <li><a href="#-running-the-live-system-on-the-robot"><b>Run on the Robot</b></a> · A full iTeach session on the Fetch
     <ul>
-    <li><a href="#-network-setup">Network setup</a></li>
+    <li><a href="#-network-setup">Network</a></li>
     <li><a href="#️-terminals">Terminals</a></li>
+    <li><a href="#-first-run-checklist">Checklist</a></li>
     </ul>
   </li>
   <li><a href="#️-build-and-deploy-the-hololens-2-app"><b>Build the HoloLens App</b></a> · Build in Unity and install on the headset
@@ -345,6 +346,24 @@ You need five terminals: four on the laptop and one on the robot.
 
 <br>
 
+### ✅ First-run checklist
+
+Run these once per new machine or setup. Each check covers one link in the chain, so a failure points to the step that needs fixing.
+
+| # | Check | Command | Expect |
+|:-:|:--|:--|:--|
+| 1 | Laptop env has everything terminals 2–4 import | `python -c "import rospy, cv_bridge, tf, tf2_ros, message_filters, ros_numpy, ultralytics, supervision, numpy; print(numpy.__version__)"` (in `iteachskills`) | No error |
+| 2 | SAM2 weights for terminal 3 | `python -c "from ultralytics import SAM; SAM('sam2_l.pt')"` (run in `iTeachSkillsApp/`, needs internet once) | Downloads/loads without error |
+| 3 | MSMFormer env can run the ROS node | `python -c "import rospy, tf, message_filters, ros_numpy, detectron2, torch; print(torch.cuda.is_available())"` (in the MSMFormer env) | `True` |
+| 4 | Laptop reaches the robot | `ping 192.168.1.3`, then `rostopic hz /head_camera/rgb/image_raw` and `rostopic hz /head_camera/depth_registered/image_raw` | Replies, and a steady rate on both topics |
+| 5 | Terminal 1 is producing predictions | `rostopic hz /seg_image_refined` | A steady rate |
+| 6 | Terminal 2 is feeding the HoloLens | `rostopic hz /hololens_stream/compressed` | A steady rate |
+| 7 | HoloLens is connected | `"ShowHud": true` in the uploaded config, then restart the app | The HUD shows the connection to `192.168.1.3:10000`, and the prediction overlay appears after **"Stream"** |
+| 8 | GPU has room for terminals 1 and 3 together | `nvidia-smi` while both run | Memory is not at the limit |
+| 9 | A capture is complete | After **"Stop Capture"** → **"Send Label"**: `ls Python/data_captured/scene_*/{rgb,depth} \| head` and `cat Python/data_captured/scene_*/prompts.json` | `rgb/` and `depth/` hold the same file names; `bboxes_xyxy` has one box per labelled object |
+
+<br>
+
 > [!CAUTION]
 > **Before starting the app:** make sure `ROSConnectionConfig.json`, with `RosIPAddress` set to the robot, is in the HoloLens **`LocalAppData` → `iTechDemo_…` → `LocalState`** folder. It's uploaded through the Device Portal web tool, see [**Point the App at Your ROS Server**](#-point-the-app-at-your-ros-server). Then start **iTechDemo** on the HoloLens.
 
@@ -500,7 +519,7 @@ export HOLO_DEVICE_PASSWORD=<device-portal-password>
 python hololens_utils/HoloDevicePortal.py --app_name iTechDemo --file_path ROSConnectionConfig.json
 ```
 
-This uploads to the same `LocalAppData/iTechDemo_…/LocalState` folder.
+This uploads to the same `LocalAppData/iTechDemo_…/LocalState` folder. The script connects over plain **HTTP** (`http://<HOLO_DEVICE_IP>`); if your Device Portal only accepts HTTPS, use the browser upload above.
 
 </details>
 
